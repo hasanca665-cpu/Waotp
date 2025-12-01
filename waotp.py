@@ -85,7 +85,7 @@ async def health():
 async def keep_alive_enhanced():
     """Enhanced keep-alive with multiple strategies for Render"""
     keep_alive_urls = [
-        "https://waotp-iozw.onrender.com"
+        "https://webck-9utn.onrender.com"
     ]
     
     while True:
@@ -114,7 +114,7 @@ async def random_ping():
             await asyncio.sleep(random_time)
             
             async with aiohttp.ClientSession() as session:
-                async with session.get("https://waotp-iozw.onrender.com", timeout=10) as response:
+                async with session.get("https://webck-9utn.onrender.com", timeout=10) as response:
                     print(f"🎲 Random ping sent: Status {response.status}")
                     
         except Exception as e:
@@ -125,7 +125,7 @@ async def immediate_ping():
     await asyncio.sleep(30)  # Wait 30 seconds after startup
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get("https://waotp-iozw.onrender.com", timeout=10) as response:
+            async with session.get("https://webck-9utn.onrender.com", timeout=10) as response:
                 print(f"🚀 Immediate startup ping: Status {response.status}")
     except Exception as e:
         print(f"⚠️ Immediate ping failed: {e}")
@@ -879,7 +879,7 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
                     message_id = otp_data['message_id']
                     
                     # Submit OTP
-                    processing_msg = await update.message.reply_text(f"🔄 Submitting OTP for `{phone}`...")
+                    processing_msg = await update.message.reply_text(f"🔄 Submitting OTP for {phone}...")
                     
                     async with aiohttp.ClientSession() as session:
                         success, message = await submit_otp_async(session, token, phone, text)
@@ -912,10 +912,10 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
                             await context.bot.edit_message_text(
                                 chat_id=update.effective_chat.id,
                                 message_id=message_id,
-                                text=f"`{phone}` {status_name}"
+                                text=f"{phone} {status_name}"
                             )
                     else:
-                        await processing_msg.edit_text(f"❌ OTP submission failed for `{phone}`: {message}")
+                        await processing_msg.edit_text(f"❌ OTP submission failed for {phone}: {message}")
                 else:
                     await update.message.reply_text("❌ Invalid OTP format. Please send 4-6 digit OTP code.")
             else:
@@ -944,7 +944,7 @@ async def track_status_optimized(context: CallbackContext):
         
         if status_code == -1:
             account_manager.release_token(token)
-            error_text = f"{prefix}`{phone}` ❌ Token Error (Auto-Retry)"
+            error_text = f"{prefix}{phone} ❌ Token Error (Auto-Retry)"
             try:
                 await context.bot.edit_message_text(
                     chat_id=data['chat_id'], 
@@ -966,7 +966,7 @@ async def track_status_optimized(context: CallbackContext):
             }
         
         if status_name != last_status:
-            new_text = f"{prefix}`{phone}` {status_name}"
+            new_text = f"{prefix}{phone} {status_name}"
             try:
                 await context.bot.edit_message_text(
                     chat_id=data['chat_id'], 
@@ -984,7 +984,7 @@ async def track_status_optimized(context: CallbackContext):
             if phone in active_numbers:
                 del active_numbers[phone]
             deleted_count = await delete_number_from_all_accounts_optimized(phone, user_id)
-            final_text = f"{prefix}`{phone}` {status_name}"
+            final_text = f"{prefix}{phone} {status_name}"
             try:
                 await context.bot.edit_message_text(
                     chat_id=data['chat_id'], 
@@ -1002,7 +1002,7 @@ async def track_status_optimized(context: CallbackContext):
             if phone in active_numbers:
                 del active_numbers[phone]
             deleted_count = await delete_number_from_all_accounts_optimized(phone, user_id)
-            timeout_text = f"{prefix}`{phone}` 🟡 Try leter "
+            timeout_text = f"{prefix}{phone} 🟡 Try leter "
             try:
                 await context.bot.edit_message_text(
                     chat_id=data['chat_id'], 
@@ -1532,7 +1532,7 @@ async def handle_settlement_callback(update: Update, context: CallbackContext):
             message += f"**{i}. Settlement #{record_id}**\n"
             message += f"📅 **Date:** {formatted_date}\n"
             message += f"🌍 **Country:** {country}\n"
-            message += f"🔢 **Count:** {count}\n"
+            message += f"🔢 **Count:** {count}\n\n"
             
         
         # Update keyboard
@@ -2060,19 +2060,19 @@ async def async_add_number_optimized(token, phone, msg, username, serial_number=
             added = await add_number_async(session, token, 11, phone)
             prefix = f"{serial_number}. " if serial_number else ""
             if added:
-                await msg.edit_text(f"{prefix}`{phone}` 🔵 In Progress")
+                await msg.edit_text(f"{prefix}{phone} 🔵 In Progress")
             else:
                 status_code, status_name, record_id = await get_status_async(session, token, phone)
                 if status_code == 16:
-                    await msg.edit_text(f"{prefix}`{phone}` 🚫 Already Exists")
+                    await msg.edit_text(f"{prefix}{phone} 🚫 Already Exists")
                     account_manager.release_token(token)
                     return
-                await msg.edit_text(f"{prefix}`{phone}` ❌ Add Failed")
+                await msg.edit_text(f"{prefix}{phone} ❌ Add Failed")
                 account_manager.release_token(token)
     except Exception as e:
         print(f"❌ Add error for {phone}: {e}")
         prefix = f"{serial_number}. " if serial_number else ""
-        await msg.edit_text(f"{prefix}`{phone}` ❌ Add Failed")
+        await msg.edit_text(f"{prefix}{phone} ❌ Add Failed")
         account_manager.release_token(token)
 
 # Process multiple numbers from a single message
@@ -2108,7 +2108,7 @@ async def process_multiple_numbers(update: Update, context: CallbackContext, tex
         save_stats(stats)
         
         # Only change: add serial number to the message
-        msg = await update.message.reply_text(f"{index}. `{phone}` 🔵 Processing...")
+        msg = await update.message.reply_text(f"{index}. {phone} 🔵 Processing...")
         asyncio.create_task(async_add_number_optimized(token, phone, msg, username, index, user_id))
         
         if context.job_queue:
@@ -2199,7 +2199,7 @@ async def handle_message_optimized(update: Update, context: CallbackContext) -> 
             stats["total_checked"] += 1
             stats["today_checked"] += 1
             save_stats(stats)
-            msg = await update.message.reply_text(f"`{phone}` 🔵 Processing...")
+            msg = await update.message.reply_text(f"{phone} 🔵 Processing...")
             asyncio.create_task(async_add_number_optimized(token, phone, msg, username, user_id=user_id))
             if context.job_queue:
                 context.job_queue.run_once(
