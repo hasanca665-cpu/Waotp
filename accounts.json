@@ -1,0 +1,28 @@
+{
+    "7319925086": [
+        {
+            "username": "HasanCAA",
+            "password": "HasanCAA",
+            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJndWxpLXVzZXIiLCJpYXQiOjE3NjQ1NzA4NTEsImV4cCI6MTc2NDU5NTg4NCwiaWQiOiIxOTE4OTE4ODE3MDQ5NzI2OTc3Iiwibmlja25hbWUiOiJIYXNhbkNBQSJ9.poiLlySgNWTRHguq_NXl1vtU0t_mlQznM2EA_fQika8",
+            "api_user_id": "1918918817049726977",
+            "nickname": "HasanCAA",
+            "last_login": "2025-01-27T15:30:00.000000",
+            "active": true,
+            "added_by": 5624278091,
+            "added_at": "2025-01-27T15:30:00.000000"
+        }
+    ],
+    "1234567890": [
+        {
+            "username": "TestUser1",
+            "password": "TestPass123",
+            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJndWxpLXVzZXIiLCJpYXQiOjE3NjQ1NzA4NTEsImV4cCI6MTc2NDU5NTg4NCwiaWQiOiIyMDAwMDAwMDAwMDAwMDAwMDAwIiwibmlja25hbWUiOiJUZXN0VXNlcjEifQ.test_token_here",
+            "api_user_id": "2000000000000000000",
+            "nickname": "TestUser1",
+            "last_login": "2025-01-27T15:30:00.000000",
+            "active": true,
+            "added_by": 5624278091,
+            "added_at": "2025-01-27T15:30:00.000000"
+        }
+    ]
+}
