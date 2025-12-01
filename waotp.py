@@ -85,7 +85,7 @@ async def health():
 async def keep_alive_enhanced():
     """Enhanced keep-alive with multiple strategies for Render"""
     keep_alive_urls = [
-        "https://waotp-iozw.onrender.com"
+        "https://webck-9utn.onrender.com"
     ]
     
     while True:
@@ -926,6 +926,7 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
         await update.message.reply_text("❌ Please reply to a number message with OTP code.")
 
 # Track status with delete button for manual delete - UPDATED VERSION
+# Track status with delete button for manual delete - UPDATED VERSION
 async def track_status_optimized(context: CallbackContext):
     data = context.job.data
     phone = data['phone']
@@ -985,7 +986,10 @@ async def track_status_optimized(context: CallbackContext):
                 if "Message is not modified" not in str(e):
                     print(f"❌ Message update failed for {phone}: {e}")
         
-        # For status 1 (Success): Keep the message without delete button
+        # Status check logic
+        final_states = [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]  # All except 1 (Success) and 2 (In Progress)
+        
+        # For status 1 (Success): Stop tracking, keep the message without delete button
         if status_code == 1:
             account_manager.release_token(token)
             # Remove from active numbers if exists
@@ -993,8 +997,16 @@ async def track_status_optimized(context: CallbackContext):
                 del active_numbers[phone]
             return
         
+        # For final states (except 1): Stop tracking, show with delete button
+        elif status_code in final_states:
+            account_manager.release_token(token)
+            # Remove from active numbers if exists
+            if phone in active_numbers:
+                del active_numbers[phone]
+            return
+        
         # For status 2 (In Progress): Continue tracking
-        if status_code == 2:
+        elif status_code == 2:
             if checks >= 120:  # 2 minutes timeout for In Progress
                 account_manager.release_token(token)
                 if phone in active_numbers:
@@ -1027,18 +1039,24 @@ async def track_status_optimized(context: CallbackContext):
             else:
                 print("❌ JobQueue not available, cannot schedule status check")
         
-        # For other status codes: Show with delete button and stop tracking
-        elif status_code is not None and status_code != 1:
-            account_manager.release_token(token)
-            # Remove from active numbers if exists
-            if phone in active_numbers:
-                del active_numbers[phone]
-            return
+        # Continue tracking for other status
+        elif status_code is not None:
+            if context.job_queue:
+                context.job_queue.run_once(
+                    track_status_optimized, 
+                    1,
+                    data={
+                        **data, 
+                        'checks': checks + 1, 
+                        'last_status': status_name
+                    }
+                )
             
     except Exception as e:
         print(f"❌ Tracking error for {phone}: {e}")
         account_manager.release_token(token)
 
+# Handle delete button callback
 # Handle delete button callback
 async def handle_delete_callback(update: Update, context: CallbackContext):
     query = update.callback_query
@@ -1988,8 +2006,7 @@ async def start(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(
             f"🔥 WA OTP 👑\n\n"
             f"✅ Active Login: {active_accounts_count}\n\n"
-            f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code\n"
-            f"🗑️ Manual Delete: Click delete button for failed numbers",
+            f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code",
             reply_markup=reply_markup
         )
         return
@@ -2017,8 +2034,7 @@ async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(
         f"🔥 WA OTP\n\n"
         f"✅ Active Login: {active_accounts_count}\n\n"
-        f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code\n"
-        f"🗑️ Manual Delete: Click delete button for failed numbers",
+        f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code",
         reply_markup=reply_markup
     )
 
@@ -2096,6 +2112,7 @@ async def refresh_server(update: Update, context: CallbackContext) -> None:
     )
 
 # Async number adding with serial number
+# Async number adding with serial number
 async def async_add_number_optimized(token, phone, msg, username, serial_number=None, user_id=None):
     try:
         async with aiohttp.ClientSession() as session:
@@ -2117,6 +2134,7 @@ async def async_add_number_optimized(token, phone, msg, username, serial_number=
         await msg.edit_text(f"{prefix}`{phone}` ❌ Add Failed")
         account_manager.release_token(token)
 
+# Process multiple numbers from a single message
 # Process multiple numbers from a single message
 async def process_multiple_numbers(update: Update, context: CallbackContext, text: str):
     """Process multiple phone numbers from a single message"""
@@ -2308,17 +2326,25 @@ def main():
     application.add_handler(CommandHandler("addacc", admin_add_account))
     application.add_handler(CommandHandler("removeacc", admin_remove_account))
     application.add_handler(CommandHandler("refresh", refresh_server))
+    application.add_handler(CommandHandler("stats", show_stats))
     application.add_handler(CommandHandler("setrate", set_settlement_rate))
     application.add_handler(CommandHandler("viewuser", admin_view_user_settlements))
     application.add_handler(CommandHandler("settlements", show_user_settlements))
     application.add_handler(CommandHandler("billing", show_admin_billing_list))
+    application.add_handler(CommandHandler("listacc", admin_list_accounts))
+    application.add_handler(CommandHandler("userstats", admin_user_stats))
+    
+    # Callback query handlers
     application.add_handler(CallbackQueryHandler(handle_settlement_callback, pattern=r"^(settlement_|billing_|admin_user_)"))
     application.add_handler(CallbackQueryHandler(handle_delete_callback, pattern=r"^delete_"))
+    
+    # Message handler
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message_optimized))
     
+    # Schedule daily stats reset at 4PM Bangladesh Time (10:00 UTC)
     if application.job_queue:
-        # Reset daily stats at 4PM Bangladesh Time (10:00 UTC)
         application.job_queue.run_daily(reset_daily_stats, time=datetime.strptime("10:00", "%H:%M").time())
+        print("✅ Daily stats reset scheduled at 4PM Bangladesh Time (10:00 UTC)")
     else:
         print("❌ JobQueue not available, daily stats reset not scheduled")
     
@@ -2327,12 +2353,15 @@ def main():
     try:
         application.run_polling(
             allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True
+            drop_pending_updates=True,
+            poll_interval=0.5,
+            timeout=30
         )
     except Exception as e:
         print(f"❌ Bot error: {e}")
         # Auto-restart after 10 seconds
         time.sleep(10)
+        print("🔄 Restarting bot...")
         main()
 
 if __name__ == "__main__":
