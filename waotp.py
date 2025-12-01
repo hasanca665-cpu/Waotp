@@ -85,7 +85,7 @@ async def health():
 async def keep_alive_enhanced():
     """Enhanced keep-alive with multiple strategies for Render"""
     keep_alive_urls = [
-        "https://waotp-iozw.onrender.com"
+        "https://webck-9utn.onrender.com"
     ]
     
     while True:
@@ -925,7 +925,7 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("❌ Please reply to a number message with OTP code.")
 
-# Track status with OTP support - FIXED: Remove success message
+# Track status with delete button for manual delete - UPDATED VERSION
 async def track_status_optimized(context: CallbackContext):
     data = context.job.data
     phone = data['phone']
@@ -967,68 +967,108 @@ async def track_status_optimized(context: CallbackContext):
         
         if status_name != last_status:
             new_text = f"{prefix}`{phone}` {status_name}"
+            
+            # Add delete button for all status except 1 (Success) and 2 (In Progress)
+            reply_markup = None
+            if status_code not in [1, 2] and status_code is not None:
+                keyboard = [[InlineKeyboardButton("🗑️ Delete", callback_data=f"delete_{phone}_{token}_{record_id}")]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+            
             try:
                 await context.bot.edit_message_text(
                     chat_id=data['chat_id'], 
                     message_id=data['message_id'],
-                    text=new_text
+                    text=new_text,
+                    reply_markup=reply_markup
                 )
             except BadRequest as e:
                 if "Message is not modified" not in str(e):
                     print(f"❌ Message update failed for {phone}: {e}")
         
-        final_states = [0, 1, 4, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-        if status_code in final_states:
+        # For status 1 (Success): Keep the message without delete button
+        if status_code == 1:
             account_manager.release_token(token)
             # Remove from active numbers if exists
             if phone in active_numbers:
                 del active_numbers[phone]
-            deleted_count = await delete_number_from_all_accounts_optimized(phone, user_id)
-            final_text = f"{prefix}`{phone}` {status_name}"
-            try:
-                await context.bot.edit_message_text(
-                    chat_id=data['chat_id'], 
-                    message_id=data['message_id'],
-                    text=final_text
-                )
-            except BadRequest as e:
-                if "Message is not modified" not in str(e):
-                    print(f"❌ Final message update failed for {phone}: {e}")
             return
         
-        if checks >= 60:
+        # For status 2 (In Progress): Continue tracking
+        if status_code == 2:
+            if checks >= 120:  # 2 minutes timeout for In Progress
+                account_manager.release_token(token)
+                if phone in active_numbers:
+                    del active_numbers[phone]
+                timeout_text = f"{prefix}`{phone}` 🕐 Timeout"
+                keyboard = [[InlineKeyboardButton("🗑️ Delete", callback_data=f"delete_{phone}_{token}_{record_id}")]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                try:
+                    await context.bot.edit_message_text(
+                        chat_id=data['chat_id'], 
+                        message_id=data['message_id'],
+                        text=timeout_text,
+                        reply_markup=reply_markup
+                    )
+                except BadRequest as e:
+                    if "Message is not modified" not in str(e):
+                        print(f"❌ Timeout message update failed for {phone}: {e}")
+                return
+            
+            if context.job_queue:
+                context.job_queue.run_once(
+                    track_status_optimized, 
+                    1,
+                    data={
+                        **data, 
+                        'checks': checks + 1, 
+                        'last_status': status_name
+                    }
+                )
+            else:
+                print("❌ JobQueue not available, cannot schedule status check")
+        
+        # For other status codes: Show with delete button and stop tracking
+        elif status_code is not None and status_code != 1:
             account_manager.release_token(token)
             # Remove from active numbers if exists
             if phone in active_numbers:
                 del active_numbers[phone]
-            deleted_count = await delete_number_from_all_accounts_optimized(phone, user_id)
-            timeout_text = f"{prefix}`{phone}` 🟡 Try leter "
-            try:
-                await context.bot.edit_message_text(
-                    chat_id=data['chat_id'], 
-                    message_id=data['message_id'],
-                    text=timeout_text
-                )
-            except BadRequest as e:
-                if "Message is not modified" not in str(e):
-                    print(f"❌ Timeout message update failed for {phone}: {e}")
             return
-        
-        if context.job_queue:
-            context.job_queue.run_once(
-                track_status_optimized, 
-                1,
-                data={
-                    **data, 
-                    'checks': checks + 1, 
-                    'last_status': status_name
-                }
-            )
-        else:
-            print("❌ JobQueue not available, cannot schedule status check")
+            
     except Exception as e:
         print(f"❌ Tracking error for {phone}: {e}")
         account_manager.release_token(token)
+
+# Handle delete button callback
+async def handle_delete_callback(update: Update, context: CallbackContext):
+    query = update.callback_query
+    await query.answer()
+    
+    data = query.data
+    if data.startswith('delete_'):
+        parts = data.split('_')
+        if len(parts) >= 4:
+            phone = parts[1]
+            token = parts[2]
+            record_id = parts[3]
+            
+            # Show deleting message
+            await query.edit_message_text(f"🗑️ Deleting `{phone}`...")
+            
+            # Delete from API
+            async with aiohttp.ClientSession() as session:
+                deleted = await delete_single_number_async(session, token, record_id, "Manual Delete")
+            
+            if deleted:
+                # Update stats
+                stats = load_stats()
+                stats["total_deleted"] += 1
+                stats["today_deleted"] += 1
+                save_stats(stats)
+                
+                await query.edit_message_text(f"✅ Successfully deleted `{phone}`")
+            else:
+                await query.edit_message_text(f"❌ Failed to delete `{phone}`")
 
 # Delete number from all accounts of a specific user
 async def delete_number_from_all_accounts_optimized(phone, user_id):
@@ -1948,7 +1988,8 @@ async def start(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(
             f"🔥 WA OTP 👑\n\n"
             f"✅ Active Login: {active_accounts_count}\n\n"
-            f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code",
+            f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code\n"
+            f"🗑️ Manual Delete: Click delete button for failed numbers",
             reply_markup=reply_markup
         )
         return
@@ -1976,7 +2017,8 @@ async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(
         f"🔥 WA OTP\n\n"
         f"✅ Active Login: {active_accounts_count}\n\n"
-        f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code",
+        f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code\n"
+        f"🗑️ Manual Delete: Click delete button for failed numbers",
         reply_markup=reply_markup
     )
 
@@ -2271,6 +2313,7 @@ def main():
     application.add_handler(CommandHandler("settlements", show_user_settlements))
     application.add_handler(CommandHandler("billing", show_admin_billing_list))
     application.add_handler(CallbackQueryHandler(handle_settlement_callback, pattern=r"^(settlement_|billing_|admin_user_)"))
+    application.add_handler(CallbackQueryHandler(handle_delete_callback, pattern=r"^delete_"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message_optimized))
     
     if application.job_queue:
