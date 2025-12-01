@@ -1,0 +1,10 @@
+aiogram
+python-telegram-bot
+fastapi
+uvicorn[standard]
+aiohttp
+requests
+PyJWT
+python-dotenv
+pytz
+flask
