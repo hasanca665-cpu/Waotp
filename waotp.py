@@ -85,7 +85,7 @@ async def health():
 async def keep_alive_enhanced():
     """Enhanced keep-alive with multiple strategies for Render"""
     keep_alive_urls = [
-        "https://webck-9utn.onrender.com"
+        "https://waotp-iozw.onrender.com"
     ]
     
     while True:
@@ -114,7 +114,7 @@ async def random_ping():
             await asyncio.sleep(random_time)
             
             async with aiohttp.ClientSession() as session:
-                async with session.get("https://webck-9utn.onrender.com", timeout=10) as response:
+                async with session.get("https://waotp-iozw.onrender.com", timeout=10) as response:
                     print(f"🎲 Random ping sent: Status {response.status}")
                     
         except Exception as e:
@@ -125,7 +125,7 @@ async def immediate_ping():
     await asyncio.sleep(30)  # Wait 30 seconds after startup
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get("https://webck-9utn.onrender.com", timeout=10) as response:
+            async with session.get("https://waotp-iozw.onrender.com", timeout=10) as response:
                 print(f"🚀 Immediate startup ping: Status {response.status}")
     except Exception as e:
         print(f"⚠️ Immediate ping failed: {e}")
