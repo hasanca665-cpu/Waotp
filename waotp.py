@@ -1125,7 +1125,7 @@ async def show_user_settlements(update: Update, context: CallbackContext):
     processing_msg = await update.message.reply_text("🔄 Loading your settlement records...")
     
     async with aiohttp.ClientSession() as session:
-        data, error = await get_user_settlements(session, token, str(api_user_id), page=page, page_size=10)
+        data, error = await get_user_settlements(session, token, str(api_user_id), page=page, page_size=5)
     
     if error:
         await processing_msg.edit_text(f"❌ Error loading settlements: {error}")
@@ -1386,7 +1386,7 @@ async def admin_view_user_settlements(update: Update, context: CallbackContext):
     processing_msg = await update.message.reply_text(f"🔄 Loading settlements for user {target_user_id}...")
     
     async with aiohttp.ClientSession() as session:
-        data, error = await get_user_settlements(session, token, target_user_id, page=page, page_size=10)
+        data, error = await get_user_settlements(session, token, target_user_id, page=page, page_size=5)
     
     if error:
         await processing_msg.edit_text(f"❌ Error loading settlements: {error}")
@@ -1485,7 +1485,7 @@ async def handle_settlement_callback(update: Update, context: CallbackContext):
             return
         
         async with aiohttp.ClientSession() as session:
-            data_result, error = await get_user_settlements(session, token, str(api_user_id), page=page, page_size=10)
+            data_result, error = await get_user_settlements(session, token, str(api_user_id), page=page, page_size=5)
         
         if error:
             await query.edit_message_text(f"❌ Error loading settlements: {error}")
@@ -1670,7 +1670,7 @@ async def handle_settlement_callback(update: Update, context: CallbackContext):
         token = account_manager.user_tokens[user_id_str][0]
         
         async with aiohttp.ClientSession() as session:
-            data_result, error = await get_user_settlements(session, token, target_user_id, page=page, page_size=10)
+            data_result, error = await get_user_settlements(session, token, target_user_id, page=page, page_size=5)
         
         if error:
             await query.edit_message_text(f"❌ Error loading settlements: {error}")
