@@ -547,7 +547,16 @@ async def get_status_async(session, token, phone):
                 record = res["data"]["records"][0]
                 status_code = record.get("registrationStatus")
                 record_id = record.get("id")
+                
+                # FIX: Check if status is 11 (Banned) but website shows it works
+                # We'll trust API's status but not delete the number
                 status_name = status_map.get(status_code, f"🔸 Status {status_code}")
+                
+                # Special handling for status 11 (Banned)
+                if status_code == 11:
+                    print(f"⚠️ Number {phone} is marked as Banned (status 11)")
+                    # We'll still return the status but won't delete it later
+                
                 return status_code, status_name, record_id
             
             # If no records found but response is successful
@@ -618,19 +627,24 @@ async def get_user_settlements(session, token, user_id, page=1, page_size=5):
         async with session.get(url, headers=headers, timeout=10) as response:
             response_text = await response.text()
             print(f"📥 Response status: {response.status}")
+            print(f"📥 Raw response: {response_text[:500]}...")
             
             if response.status == 200:
                 try:
                     result = await response.json(content_type=None)
+                    print(f"📊 Parsed result: {result}")
                     
                     if result.get('code') == 200:
                         data = result.get('data', {})
                         
                         # Check if data has the expected structure
-                        if 'records' in data:
-                            records = data.get('records', [])
-                            total = data.get('total', len(records))
-                            pages = data.get('pages', 1)
+                        if isinstance(data, dict) and 'page' in data:
+                            page_data = data.get('page', {})
+                            records = page_data.get('records', [])
+                            total = page_data.get('total', len(records))
+                            pages = page_data.get('pages', 1)
+                            
+                            print(f"✅ Found {len(records)} settlement records")
                             
                             return {
                                 'records': records,
@@ -640,14 +654,30 @@ async def get_user_settlements(session, token, user_id, page=1, page_size=5):
                                 'size': page_size
                             }, None
                         else:
-                            print(f"⚠️ No 'records' key in data: {data}")
-                            return {
-                                'records': [],
-                                'total': 0,
-                                'pages': 0,
-                                'page': page,
-                                'size': page_size
-                            }, None
+                            # Try alternative structure
+                            if isinstance(data, dict) and 'records' in data:
+                                records = data.get('records', [])
+                                total = data.get('total', len(records))
+                                pages = data.get('pages', 1)
+                                
+                                print(f"✅ Found {len(records)} settlement records (alternative structure)")
+                                
+                                return {
+                                    'records': records,
+                                    'total': total,
+                                    'pages': pages,
+                                    'page': page,
+                                    'size': page_size
+                                }, None
+                            else:
+                                print(f"⚠️ Unexpected data structure: {data}")
+                                return {
+                                    'records': [],
+                                    'total': 0,
+                                    'pages': 0,
+                                    'page': page,
+                                    'size': page_size
+                                }, None
                     else:
                         error_msg = result.get('msg', 'Unknown error')
                         print(f"❌ API returned error: {error_msg}")
@@ -864,8 +894,8 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
     # Check if this is a reply to a number message
     if update.message.reply_to_message:
         replied_message = update.message.reply_to_message.text
-        # Extract phone number from replied message
-        phone_match = re.search(r'`(\d{10})`', replied_message)
+        # FIX: Extract phone number properly (without backticks)
+        phone_match = re.search(r'(\d{10})', replied_message)
         if phone_match:
             phone = phone_match.group(1)
             
@@ -879,7 +909,7 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
                     message_id = otp_data['message_id']
                     
                     # Submit OTP
-                    processing_msg = await update.message.reply_text(f"🔄 Submitting OTP for `{phone}`...")
+                    processing_msg = await update.message.reply_text(f"🔄 Submitting OTP for {phone}...")
                     
                     async with aiohttp.ClientSession() as session:
                         success, message = await submit_otp_async(session, token, phone, text)
@@ -909,13 +939,14 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
                             status_code, status_name, record_id = await get_status_async(session, token, phone)
                         
                         if status_code is not None:
+                            # FIX: Remove backticks from message
                             await context.bot.edit_message_text(
                                 chat_id=update.effective_chat.id,
                                 message_id=message_id,
-                                text=f"`{phone}` {status_name}"
+                                text=f"{phone} {status_name}"
                             )
                     else:
-                        await processing_msg.edit_text(f"❌ OTP submission failed for `{phone}`: {message}")
+                        await processing_msg.edit_text(f"❌ OTP submission failed for {phone}: {message}")
                 else:
                     await update.message.reply_text("❌ Invalid OTP format. Please send 4-6 digit OTP code.")
             else:
@@ -925,7 +956,7 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("❌ Please reply to a number message with OTP code.")
 
-# Track status with OTP support - FIXED: Remove success message
+# Track status with OTP support - FIXED: Remove success message and fix delete logic
 async def track_status_optimized(context: CallbackContext):
     data = context.job.data
     phone = data['phone']
@@ -944,7 +975,7 @@ async def track_status_optimized(context: CallbackContext):
         
         if status_code == -1:
             account_manager.release_token(token)
-            error_text = f"{prefix}`{phone}` ❌ Token Error (Auto-Retry)"
+            error_text = f"{prefix}{phone} ❌ Token Error (Auto-Retry)"
             try:
                 await context.bot.edit_message_text(
                     chat_id=data['chat_id'], 
@@ -966,7 +997,8 @@ async def track_status_optimized(context: CallbackContext):
             }
         
         if status_name != last_status:
-            new_text = f"{prefix}`{phone}` {status_name}"
+            # FIX: Remove backticks from message
+            new_text = f"{prefix}{phone} {status_name}"
             try:
                 await context.bot.edit_message_text(
                     chat_id=data['chat_id'], 
@@ -977,18 +1009,22 @@ async def track_status_optimized(context: CallbackContext):
                 if "Message is not modified" not in str(e):
                     print(f"❌ Message update failed for {phone}: {e}")
         
-        final_states = [0, 1, 4, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        # FIX: Update final states - Don't delete if status is 11 (Banned)
+        # Website shows it can work even if API says banned
+        final_states = [0, 1, 4, 7, 6, 8, 9, 10, 12, 13, 14, 15, 16]  # Removed 11 from automatic deletion
+        
         if status_code in final_states:
             account_manager.release_token(token)
             # Remove from active numbers if exists
             if phone in active_numbers:
                 del active_numbers[phone]
             
-            # ✅ শুধুমাত্র স্ট্যাটাস 1 এবং 2 ছাড়া বাকি সব স্ট্যাটাসে ডিলিট হবে
-            if status_code not in [1, 2]:
+            # ✅ Don't delete if status is 11 (Banned) - let user decide manually
+            if status_code != 11:  # Changed from checking [1, 2] to checking != 11
                 deleted_count = await delete_number_from_all_accounts_optimized(phone, user_id)
             
-            final_text = f"{prefix}`{phone}` {status_name}"
+            # FIX: Remove backticks from final message
+            final_text = f"{prefix}{phone} {status_name}"
             try:
                 await context.bot.edit_message_text(
                     chat_id=data['chat_id'], 
@@ -1000,17 +1036,35 @@ async def track_status_optimized(context: CallbackContext):
                     print(f"❌ Final message update failed for {phone}: {e}")
             return
         
+        # Special handling for status 11 (Banned)
+        if status_code == 11:
+            # Don't delete automatically, just show status and release token
+            account_manager.release_token(token)
+            # Remove from active numbers if exists
+            if phone in active_numbers:
+                del active_numbers[phone]
+            
+            # FIX: Remove backticks from banned message
+            banned_text = f"{prefix}{phone} ⚫ Banned (Manual Check Recommended)"
+            try:
+                await context.bot.edit_message_text(
+                    chat_id=data['chat_id'], 
+                    message_id=data['message_id'],
+                    text=banned_text
+                )
+            except BadRequest as e:
+                if "Message is not modified" not in str(e):
+                    print(f"❌ Banned message update failed for {phone}: {e}")
+            return
+        
         if checks >= 120:
             account_manager.release_token(token)
             # Remove from active numbers if exists
             if phone in active_numbers:
                 del active_numbers[phone]
             
-            # ✅ এখানেও স্ট্যাটাস 1 এবং 2 এর জন্য ডিলিট বন্ধ করুন
-            if status_code not in [1, 2]:
-                deleted_count = await delete_number_from_all_accounts_optimized(phone, user_id)
-            
-            timeout_text = f"{prefix}`{phone}` 🟡 Try leter "
+            # FIX: Remove backticks from timeout message
+            timeout_text = f"{prefix}{phone} 🟡 Try later"
             try:
                 await context.bot.edit_message_text(
                     chat_id=data['chat_id'], 
@@ -1139,18 +1193,23 @@ async def show_user_settlements(update: Update, context: CallbackContext):
     total_records = data.get('total', 0)
     total_pages = data.get('pages', 1)
     
+    # Get settlement rate from settings
+    settings = load_settings()
+    rate = settings.get('settlement_rate', 0.10)
+    
     # Calculate totals
     total_count = 0
     total_amount = 0
     for record in records:
         count = record.get('count', 0)
-        record_rate = record.get('receiptPrice', 0.10)
         total_count += count
-        total_amount += count * record_rate
+        total_amount += count * rate
     
     message = f"📦 **Your Settlement Records**\n\n"
     message += f"📊 **Total Records:** {total_records}\n"
     message += f"🔢 **Total Count:** {total_count}\n"
+    message += f"💰 **Total Amount:** ${total_amount:.2f}\n"
+    message += f"💵 **Rate:** ${rate:.2f}\n"
     message += f"📄 **Page:** {page}/{total_pages}\n\n"
     
     for i, record in enumerate(records, 1):
@@ -1159,8 +1218,7 @@ async def show_user_settlements(update: Update, context: CallbackContext):
             record_id = str(record_id)[:8] + '...'
         
         count = record.get('count', 0)
-        record_rate = record.get('receiptPrice', 0.10)
-        amount = count * record_rate
+        amount = count * rate
         gmt_create = record.get('gmtCreate', 'N/A')
         country = record.get('countryName', 'N/A') or record.get('country', 'N/A')
         
@@ -1171,7 +1229,10 @@ async def show_user_settlements(update: Update, context: CallbackContext):
                 if 'T' in gmt_create:
                     date_obj = datetime.fromisoformat(gmt_create.replace('Z', '+00:00'))
                 else:
-                    date_obj = datetime.strptime(gmt_create, '%Y-%m-%d %H:%M:%S')
+                    try:
+                        date_obj = datetime.strptime(gmt_create, '%Y-%m-%d %H:%M:%S')
+                    except:
+                        date_obj = datetime.strptime(gmt_create, '%Y-%m-%d')
                 formatted_date = date_obj.strftime('%d %B %Y, %H:%M')
             else:
                 formatted_date = 'N/A'
@@ -1181,7 +1242,8 @@ async def show_user_settlements(update: Update, context: CallbackContext):
         message += f"**{i}. Settlement #{record_id}**\n"
         message += f"📅 **Date:** {formatted_date}\n"
         message += f"🌍 **Country:** {country}\n"
-        message += f"🔢 **Count:** {count}\n\n"
+        message += f"🔢 **Count:** {count}\n"
+        message += f"💰 **Amount:** ${amount:.2f}\n\n"
         
     
     # Add pagination buttons
@@ -1499,18 +1561,23 @@ async def handle_settlement_callback(update: Update, context: CallbackContext):
         total_records = data_result.get('total', 0)
         total_pages = data_result.get('pages', 1)
         
+        # Get settlement rate from settings
+        settings = load_settings()
+        rate = settings.get('settlement_rate', 0.10)
+        
         # Calculate totals
         total_count = 0
         total_amount = 0
         for record in records:
             count = record.get('count', 0)
-            record_rate = record.get('receiptPrice', 0.10)
             total_count += count
-            total_amount += count * record_rate
+            total_amount += count * rate
         
         message = f"📦 **Your Settlement Records**\n\n"
         message += f"📊 **Total Records:** {total_records}\n"
         message += f"🔢 **Total Count:** {total_count}\n"
+        message += f"💰 **Total Amount:** ${total_amount:.2f}\n"
+        message += f"💵 **Rate:** ${rate:.2f}\n"
         message += f"📄 **Page:** {page}/{total_pages}\n\n"
         
         for i, record in enumerate(records, 1):
@@ -1519,8 +1586,7 @@ async def handle_settlement_callback(update: Update, context: CallbackContext):
                 record_id = str(record_id)[:8] + '...'
             
             count = record.get('count', 0)
-            record_rate = record.get('receiptPrice', 0.10)
-            amount = count * record_rate
+            amount = count * rate
             gmt_create = record.get('gmtCreate', 'N/A')
             country = record.get('countryName', 'N/A') or record.get('country', 'N/A')
             
@@ -1530,8 +1596,11 @@ async def handle_settlement_callback(update: Update, context: CallbackContext):
                     if 'T' in gmt_create:
                         date_obj = datetime.fromisoformat(gmt_create.replace('Z', '+00:00'))
                     else:
-                        date_obj = datetime.strptime(gmt_create, '%Y-%m-%d %H:%M:%S')
-                    formatted_date = date_obj.strftime('%d %B %Y, %H:%M')
+                        try:
+                            date_obj = datetime.strptime(gmt_create, '%Y-%m-%d %H:%M:%S')
+                        except:
+                            date_obj = datetime.strptime(gmt_create, '%Y-%m-%d')
+                        formatted_date = date_obj.strftime('%d %B %Y, %H:%M')
                 else:
                     formatted_date = 'N/A'
             except:
@@ -1541,6 +1610,7 @@ async def handle_settlement_callback(update: Update, context: CallbackContext):
             message += f"📅 **Date:** {formatted_date}\n"
             message += f"🌍 **Country:** {country}\n"
             message += f"🔢 **Count:** {count}\n"
+            message += f"💰 **Amount:** ${amount:.2f}\n\n"
             
         
         # Update keyboard
@@ -2061,26 +2131,30 @@ async def refresh_server(update: Update, context: CallbackContext) -> None:
         f"• Failed: {total_accounts - active_accounts}"
     )
 
-# Async number adding with serial number
+# Async number adding with serial number - FIXED: Remove backticks
 async def async_add_number_optimized(token, phone, msg, username, serial_number=None, user_id=None):
     try:
         async with aiohttp.ClientSession() as session:
             added = await add_number_async(session, token, 11, phone)
             prefix = f"{serial_number}. " if serial_number else ""
             if added:
-                await msg.edit_text(f"{prefix}`{phone}` 🔵 In Progress")
+                # FIX: Remove backticks
+                await msg.edit_text(f"{prefix}{phone} 🔵 In Progress")
             else:
                 status_code, status_name, record_id = await get_status_async(session, token, phone)
                 if status_code == 16:
-                    await msg.edit_text(f"{prefix}`{phone}` 🚫 Already Exists")
+                    # FIX: Remove backticks
+                    await msg.edit_text(f"{prefix}{phone} 🚫 Already Exists")
                     account_manager.release_token(token)
                     return
-                await msg.edit_text(f"{prefix}`{phone}` ❌ Add Failed")
+                # FIX: Remove backticks
+                await msg.edit_text(f"{prefix}{phone} ❌ Add Failed")
                 account_manager.release_token(token)
     except Exception as e:
         print(f"❌ Add error for {phone}: {e}")
         prefix = f"{serial_number}. " if serial_number else ""
-        await msg.edit_text(f"{prefix}`{phone}` ❌ Add Failed")
+        # FIX: Remove backticks
+        await msg.edit_text(f"{prefix}{phone} ❌ Add Failed")
         account_manager.release_token(token)
 
 # Process multiple numbers from a single message
@@ -2115,8 +2189,8 @@ async def process_multiple_numbers(update: Update, context: CallbackContext, tex
         stats["today_checked"] += 1
         save_stats(stats)
         
-        # Only change: add serial number to the message
-        msg = await update.message.reply_text(f"{index}. `{phone}` 🔵 Processing...")
+        # FIX: Remove backticks from processing message
+        msg = await update.message.reply_text(f"{index}. {phone} 🔵 Processing...")
         asyncio.create_task(async_add_number_optimized(token, phone, msg, username, index, user_id))
         
         if context.job_queue:
@@ -2207,7 +2281,8 @@ async def handle_message_optimized(update: Update, context: CallbackContext) -> 
             stats["total_checked"] += 1
             stats["today_checked"] += 1
             save_stats(stats)
-            msg = await update.message.reply_text(f"`{phone}` 🔵 Processing...")
+            # FIX: Remove backticks
+            msg = await update.message.reply_text(f"{phone} 🔵 Processing...")
             asyncio.create_task(async_add_number_optimized(token, phone, msg, username, user_id=user_id))
             if context.job_queue:
                 context.job_queue.run_once(
