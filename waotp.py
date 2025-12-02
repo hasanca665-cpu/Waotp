@@ -957,6 +957,7 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
         await update.message.reply_text("❌ Please reply to a number message with OTP code.")
 
 # Track status with OTP support - FIXED: Remove success message and fix delete logic
+# Track status with OTP support - COMPLETELY FIXED DELETE LOGIC
 async def track_status_optimized(context: CallbackContext):
     data = context.job.data
     phone = data['phone']
@@ -997,7 +998,6 @@ async def track_status_optimized(context: CallbackContext):
             }
         
         if status_name != last_status:
-            # FIX: Remove backticks from message
             new_text = f"{prefix}{phone} {status_name}"
             try:
                 await context.bot.edit_message_text(
@@ -1009,21 +1009,17 @@ async def track_status_optimized(context: CallbackContext):
                 if "Message is not modified" not in str(e):
                     print(f"❌ Message update failed for {phone}: {e}")
         
-        # FIX: Update final states - Don't delete if status is 11 (Banned)
-        # Website shows it can work even if API says banned
-        final_states = [0, 1, 4, 7, 6, 8, 9, 10, 12, 13, 14, 15, 16]  # Removed 11 from automatic deletion
+        # ✅ FIXED: শুধুমাত্র স্ট্যাটাস 1 এবং 2 ছাড়া বাকি সব স্ট্যাটাসে ডিলিট হবে
+        # Status codes that should NOT trigger auto-delete: 1 (Success), 2 (In Progress)
+        no_delete_statuses = [1, 2]
         
-        if status_code in final_states:
+        if status_code in no_delete_statuses:
+            # Success বা In Progress হলে শুধু status show করবে, ডিলিট করবে না
             account_manager.release_token(token)
-            # Remove from active numbers if exists
+            # Remove from active numbers if exists (In Progress থেকে Success হলে)
             if phone in active_numbers:
                 del active_numbers[phone]
             
-            # ✅ Don't delete if status is 11 (Banned) - let user decide manually
-            if status_code != 11:  # Changed from checking [1, 2] to checking != 11
-                deleted_count = await delete_number_from_all_accounts_optimized(phone, user_id)
-            
-            # FIX: Remove backticks from final message
             final_text = f"{prefix}{phone} {status_name}"
             try:
                 await context.bot.edit_message_text(
@@ -1036,34 +1032,40 @@ async def track_status_optimized(context: CallbackContext):
                     print(f"❌ Final message update failed for {phone}: {e}")
             return
         
-        # Special handling for status 11 (Banned)
-        if status_code == 11:
-            # Don't delete automatically, just show status and release token
+        # ✅ Status 11 (Banned) সহ বাকি সব স্ট্যাটাসে ডিলিট হবে
+        # এগুলোর জন্য ডিলিট হবে: 0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, etc.
+        auto_delete_statuses = [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        
+        if status_code in auto_delete_statuses:
             account_manager.release_token(token)
             # Remove from active numbers if exists
             if phone in active_numbers:
                 del active_numbers[phone]
             
-            # FIX: Remove backticks from banned message
-            banned_text = f"{prefix}{phone} ⚫ Banned (Manual Check Recommended)"
+            # ডিলিট করবে (Status 11 সহ)
+            deleted_count = await delete_number_from_all_accounts_optimized(phone, user_id)
+            
+            final_text = f"{prefix}{phone} {status_name}"
             try:
                 await context.bot.edit_message_text(
                     chat_id=data['chat_id'], 
                     message_id=data['message_id'],
-                    text=banned_text
+                    text=final_text
                 )
             except BadRequest as e:
                 if "Message is not modified" not in str(e):
-                    print(f"❌ Banned message update failed for {phone}: {e}")
+                    print(f"❌ Final message update failed for {phone}: {e}")
             return
         
+        # Timeout handling after 120 checks (2 minutes)
         if checks >= 120:
             account_manager.release_token(token)
-            # Remove from active numbers if exists
             if phone in active_numbers:
                 del active_numbers[phone]
             
-            # FIX: Remove backticks from timeout message
+            # Timeout হলে ডিলিট করবে
+            deleted_count = await delete_number_from_all_accounts_optimized(phone, user_id)
+            
             timeout_text = f"{prefix}{phone} 🟡 Try later"
             try:
                 await context.bot.edit_message_text(
@@ -1076,6 +1078,7 @@ async def track_status_optimized(context: CallbackContext):
                     print(f"❌ Timeout message update failed for {phone}: {e}")
             return
         
+        # Continue tracking if still in progress
         if context.job_queue:
             context.job_queue.run_once(
                 track_status_optimized, 
