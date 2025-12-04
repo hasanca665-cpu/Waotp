@@ -94,7 +94,7 @@ status_map = {
     8: "🟠 Limited",
     9: "🔶 Restricted", 
     10: "🟣 VIP Number",
-    11: "⚫ Banned",
+    11: "⚠️ Add Again",
     12: "🟤 Temp Blocked",
     13: "Used Number",
     14: "🌀 Processing",
