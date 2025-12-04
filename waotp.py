@@ -42,6 +42,45 @@ SETTINGS_FILE = "/tmp/settings.json" if 'RENDER' in os.environ else "settings.js
 ADMIN_ID = 5624278091
 MAX_PER_ACCOUNT = 5
 
+# Country code to API cc mapping
+COUNTRY_CODE_MAP = {
+    '11': '11',      # Canada
+    '234': '234',    # Nigeria
+    '1': '1',    # Usa
+    '91': '91',    # India
+    '880': '880',  # Bangladesh
+    '92': '92',    # Pakistan
+    '235': '235',  # None
+    '62': '62',    # Indonesia
+    '60': '60',    # Malaysia
+    '63': '63',    # Philippines
+    '84': '84',    # Vietnam
+    '66': '66',    # Thailand
+    '65': '65',    # Singapore
+    '86': '86',    # China
+    '81': '81',    # Japan
+    '82': '82',    # South Korea
+    '33': '33',    # France
+    '49': '49',    # Germany
+    '39': '39',    # Italy
+    '34': '34',    # Spain
+    '7': '7',      # Russia
+    '20': '20',    # Egypt
+    '27': '27',    # South Africa
+    '254': '254',  # Kenya
+    '98': '98',    # Iran
+    '90': '90',    # Turkey
+    '966': '966',  # Saudi Arabia
+    '971': '971',  # UAE
+    '93': '93',    # Afghanistan
+    '355': '355',  # Albania
+    '213': '213',  # Algeria
+    '376': '376',  # Andorra
+    '244': '244',  # Angola
+    '1264': '1264', # Anguilla
+    '672': '672',  # Antarctica
+}
+
 # Status map
 status_map = {
     0: "⚠️ Process Failed",
@@ -390,10 +429,76 @@ async def login_api_async(username, password):
         print(f"❌ Login error for {username}: {type(e).__name__}: {e}")
         return None, None, None
 
+def extract_phone_numbers_with_cc(text: str) -> List[Tuple[str, str]]:
+    """
+    Extract phone numbers with country code from text in various formats.
+    Returns list of tuples: (phone_number, api_cc)
+    """
+    all_numbers = []
+    
+    # Generic pattern for all country codes
+    # This pattern matches: +[country_code] [phone_number]
+    pattern = r'\+\s*(\d{1,4})\s*[\(\)\s\.\-]*([\d\s\.\-]{6,20})'
+    matches = re.finditer(pattern, text, re.IGNORECASE)
+    
+    for match in matches:
+        country_code = match.group(1).strip()
+        phone_part = match.group(2).strip()
+        
+        # Clean phone number (remove all non-digits)
+        phone_digits = re.sub(r'\D', '', phone_part)
+        
+        # Remove country code from beginning if phone includes it
+        if phone_digits.startswith(country_code):
+            phone_digits = phone_digits[len(country_code):]
+        
+        # For US/Canada numbers starting with 1
+        if country_code == "1" and len(phone_digits) == 11 and phone_digits.startswith('1'):
+            phone_digits = phone_digits[1:]
+        
+        # Validate phone number length
+        if 7 <= len(phone_digits) <= 15:
+            # Get API country code (default to the same if not in map)
+            api_cc = COUNTRY_CODE_MAP.get(country_code, country_code)
+            all_numbers.append((phone_digits, api_cc))
+    
+    # Also handle numbers without country code prefix
+    # These will be treated as US numbers by default
+    pattern_no_cc = r'\b(\d{10})\b'
+    matches_no_cc = re.finditer(pattern_no_cc, text)
+    for match in matches_no_cc:
+        phone_digits = match.group(1)
+        # Assume US numbers (cc=1) for 10-digit numbers without country code
+        all_numbers.append((phone_digits, "1"))
+    
+    # Handle formats like (226) 243-5292 or 226-243-5292
+    pattern_us_format = r'[\(\)\s]*(\d{3})[\)\s\.\-]*(\d{3})[\)\s\.\-]*(\d{4})'
+    matches_us_format = re.finditer(pattern_us_format, text)
+    for match in matches_us_format:
+        if not re.search(r'\+\d', text):  # Only if no country code present
+            phone_digits = match.group(1) + match.group(2) + match.group(3)
+            all_numbers.append((phone_digits, "1"))
+    
+    # Remove duplicates while preserving order
+    unique_numbers = []
+    seen = set()
+    
+    for phone, api_cc in all_numbers:
+        key = f"{api_cc}:{phone}"
+        if key not in seen:
+            unique_numbers.append((phone, api_cc))
+            seen.add(key)
+    
+    # Debug: Print extracted numbers with country codes
+    print(f"🔍 Text: {text}")
+    print(f"📱 Extracted numbers with CC: {unique_numbers}")
+    
+    return unique_numbers
+
 # Improved phone number extraction - ALL FORMATS
 def extract_phone_numbers(text: str) -> List[str]:
     """
-    Extract phone numbers from text in various formats:
+    Extract phone numbers from text in various formats (for backward compatibility):
     - 2269868875
     - 226-243-5292
     - (226) 243-5292
@@ -403,98 +508,31 @@ def extract_phone_numbers(text: str) -> List[str]:
     - +15793002372
     - +1 (343) 218-1238
     """
-    # First, try to find all phone number patterns
-    all_numbers = []
-    
-    # Pattern 1: +1 (343) 218-1238 or +1(343)218-1238
-    pattern1 = r'\+\s*1\s*\(\s*(\d{3})\s*\)\s*(\d{3})\s*[-.\s]*(\d{4})'
-    matches1 = re.finditer(pattern1, text, re.IGNORECASE)
-    for match in matches1:
-        number = match.group(1) + match.group(2) + match.group(3)
-        all_numbers.append(number)
-    
-    # Pattern 2: +15793002372 (11 digits starting with +1)
-    pattern2 = r'\+\s*1\s*(\d{10})'
-    matches2 = re.finditer(pattern2, text)
-    for match in matches2:
-        number = match.group(1)
-        all_numbers.append(number)
-    
-    # Pattern 3: (343) 218-1238
-    pattern3 = r'\(\s*(\d{3})\s*\)\s*(\d{3})\s*[-.\s]*(\d{4})'
-    matches3 = re.finditer(pattern3, text)
-    for match in matches3:
-        number = match.group(1) + match.group(2) + match.group(3)
-        all_numbers.append(number)
-    
-    # Pattern 4: 343-218-1238 or 343.218.1238 or 343 218 1238
-    pattern4 = r'\b(\d{3})\s*[-.\s]\s*(\d{3})\s*[-.\s]\s*(\d{4})\b'
-    matches4 = re.finditer(pattern4, text)
-    for match in matches4:
-        number = match.group(1) + match.group(2) + match.group(3)
-        all_numbers.append(number)
-    
-    # Pattern 5: 10 consecutive digits
-    pattern5 = r'\b(\d{10})\b'
-    matches5 = re.finditer(pattern5, text)
-    for match in matches5:
-        number = match.group(1)
-        all_numbers.append(number)
-    
-    # Pattern 6: International format without parentheses
-    pattern6 = r'\+\s*1\s*(\d{3})\s*(\d{3})\s*(\d{4})'
-    matches6 = re.finditer(pattern6, text)
-    for match in matches6:
-        number = match.group(1) + match.group(2) + match.group(3)
-        all_numbers.append(number)
-    
-    # Remove any non-digit characters and ensure 10 digits
-    cleaned_numbers = []
-    for num in all_numbers:
-        # Remove all non-digit characters
-        digits = re.sub(r'\D', '', num)
-        
-        # If 11 digits and starts with 1, remove the 1
-        if len(digits) == 11 and digits.startswith('1'):
-            digits = digits[1:]
-        
-        # If we have exactly 10 digits, add it
-        if len(digits) == 10:
-            cleaned_numbers.append(digits)
-    
-    # Remove duplicates while preserving order
-    unique_numbers = []
-    seen = set()
-    for num in cleaned_numbers:
-        if num not in seen:
-            unique_numbers.append(num)
-            seen.add(num)
-    
-    # Debug: Print extracted numbers
-    print(f"🔍 Text: {text}")
-    print(f"📱 Extracted numbers: {unique_numbers}")
-    
-    return unique_numbers
+    numbers_with_cc = extract_phone_numbers_with_cc(text)
+    # Return only phone numbers for backward compatibility
+    return [num for num, cc in numbers_with_cc]
     
 async def add_number_async(session, token, cc, phone, retry_count=2):
+    """Add number with specific country code"""
     for attempt in range(retry_count):
         try:
             headers = {"Admin-Token": token}
             add_url = f"{BASE_URL}/z-number-base/addNum?cc={cc}&phoneNum={phone}&smsStatus=2"
+            print(f"🌍 Adding number {phone} with country code {cc}")
             async with session.post(add_url, headers=headers, timeout=10) as response:
                 if response.status == 200:
-                    print(f"✅ Number {phone} added successfully")
+                    print(f"✅ Number {phone} (CC: {cc}) added successfully")
                     return True
                 elif response.status == 401:
-                    print(f"❌ Token expired during add for {phone}, attempt {attempt + 1}")
+                    print(f"❌ Token expired during add for {phone} (CC: {cc}), attempt {attempt + 1}")
                     continue
                 elif response.status in (400, 409):
-                    print(f"❌ Number {phone} already exists or invalid, status {response.status}")
+                    print(f"❌ Number {phone} (CC: {cc}) already exists or invalid, status {response.status}")
                     return False
                 else:
-                    print(f"❌ Add failed for {phone} with status {response.status}")
+                    print(f"❌ Add failed for {phone} (CC: {cc}) with status {response.status}")
         except Exception as e:
-            print(f"❌ Add number error for {phone} (attempt {attempt + 1}): {e}")
+            print(f"❌ Add number error for {phone} (CC: {cc}) (attempt {attempt + 1}): {e}")
     return False
 
 # Status checking - FIXED VERSION
@@ -2061,41 +2099,42 @@ async def refresh_server(update: Update, context: CallbackContext) -> None:
         f"• Failed: {total_accounts - active_accounts}"
     )
 
-# Async number adding with serial number
-async def async_add_number_optimized(token, phone, msg, username, serial_number=None, user_id=None):
+# Async number adding with serial number and country code
+async def async_add_number_optimized(token, phone, msg, username, serial_number=None, user_id=None, cc="1"):
+    """Add number with specific country code"""
     try:
         async with aiohttp.ClientSession() as session:
-            added = await add_number_async(session, token, 11, phone)
+            added = await add_number_async(session, token, cc, phone)
             prefix = f"{serial_number}. " if serial_number else ""
             if added:
-                await msg.edit_text(f"{prefix}{phone} 🔵 In Progress")
+                await msg.edit_text(f"{prefix}{phone} (CC: {cc}) 🔵 In Progress")
             else:
                 status_code, status_name, record_id = await get_status_async(session, token, phone)
                 if status_code == 16:
-                    await msg.edit_text(f"{prefix}{phone} 🚫 Already Exists")
+                    await msg.edit_text(f"{prefix}{phone} (CC: {cc}) 🚫 Already Exists")
                     account_manager.release_token(token)
                     return
-                await msg.edit_text(f"{prefix}{phone} ❌ Add Failed")
+                await msg.edit_text(f"{prefix}{phone} (CC: {cc}) ❌ Add Failed")
                 account_manager.release_token(token)
     except Exception as e:
-        print(f"❌ Add error for {phone}: {e}")
+        print(f"❌ Add error for {phone} (CC: {cc}): {e}")
         prefix = f"{serial_number}. " if serial_number else ""
-        await msg.edit_text(f"{prefix}{phone} ❌ Add Failed")
+        await msg.edit_text(f"{prefix}{phone} (CC: {cc}) ❌ Add Failed")
         account_manager.release_token(token)
 
-# Process multiple numbers from a single message
+# Process multiple numbers from a single message with country codes
 async def process_multiple_numbers(update: Update, context: CallbackContext, text: str):
-    """Process multiple phone numbers from a single message"""
-    numbers = extract_phone_numbers(text)
+    """Process multiple phone numbers from a single message with country codes"""
+    numbers_with_cc = extract_phone_numbers_with_cc(text)
     
-    if not numbers:
+    if not numbers_with_cc:
         await update.message.reply_text("❌ কোনো ভ্যালিড নম্বর পাওয়া যায়নি!")
         return
     
     user_id = update.effective_user.id
     
     # Start processing immediately without any notification message
-    for index, phone in enumerate(numbers, 1):
+    for index, (phone, cc) in enumerate(numbers_with_cc, 1):
         remaining = account_manager.get_user_remaining_checks(user_id)
         if remaining <= 0:
             # Only notify if all accounts are full
@@ -2115,9 +2154,9 @@ async def process_multiple_numbers(update: Update, context: CallbackContext, tex
         stats["today_checked"] += 1
         save_stats(stats)
         
-        # Only change: add serial number to the message
-        msg = await update.message.reply_text(f"{index}. {phone} 🔵 Processing...")
-        asyncio.create_task(async_add_number_optimized(token, phone, msg, username, index, user_id))
+        # Only change: add serial number to the message with country code
+        msg = await update.message.reply_text(f"{index}. {phone} (CC: {cc}) 🔵 Processing...")
+        asyncio.create_task(async_add_number_optimized(token, phone, msg, username, index, user_id, cc))
         
         if context.job_queue:
             context.job_queue.run_once(
@@ -2187,12 +2226,12 @@ async def handle_message_optimized(update: Update, context: CallbackContext) -> 
             await admin_user_stats(update, context)
             return
     
-    # Handle phone numbers (single or multiple)
-    numbers = extract_phone_numbers(text)
-    if numbers:
-        if len(numbers) == 1:
+    # Handle phone numbers (single or multiple) with country codes
+    numbers_with_cc = extract_phone_numbers_with_cc(text)
+    if numbers_with_cc:
+        if len(numbers_with_cc) == 1:
             # Single number processing
-            phone = numbers[0]
+            phone, cc = numbers_with_cc[0]
             remaining = account_manager.get_user_remaining_checks(user_id)
             if remaining <= 0:
                 active_accounts = account_manager.get_user_active_accounts_count(user_id)
@@ -2207,8 +2246,8 @@ async def handle_message_optimized(update: Update, context: CallbackContext) -> 
             stats["total_checked"] += 1
             stats["today_checked"] += 1
             save_stats(stats)
-            msg = await update.message.reply_text(f"{phone} 🔵 Processing...")
-            asyncio.create_task(async_add_number_optimized(token, phone, msg, username, user_id=user_id))
+            msg = await update.message.reply_text(f"{phone} (CC: {cc}) 🔵 Processing...")
+            asyncio.create_task(async_add_number_optimized(token, phone, msg, username, user_id=user_id, cc=cc))
             if context.job_queue:
                 context.job_queue.run_once(
                     track_status_optimized, 
