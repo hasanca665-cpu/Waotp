@@ -608,7 +608,7 @@ async def submit_otp_async(session, token, phone, code):
         return False, str(e)
 
 # Settlement functions - FIXED VERSION
-async def get_user_settlements(session, token, user_id, page=1, page_size=5):
+async def get_user_settlements(session, token, user_id, page=1, page_size=2):
     """Get settlement records for a specific user - CORRECTED VERSION"""
     try:
         headers = {"Admin-Token": token}
