@@ -41,7 +41,7 @@ SETTINGS_FILE = "/tmp/settings.json" if 'RENDER' in os.environ else "settings.js
 USD_TO_BDT = 125  # Exchange rate
 
 ADMIN_ID = 5624278091
-MAX_PER_ACCOUNT = 3
+MAX_PER_ACCOUNT = 5
 
 # Status map
 status_map = {
