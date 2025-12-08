@@ -27,21 +27,36 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = "8269172542:AAFzjGa-ATGCxkcp2lA2VCcbDx6XyEb_lNI"
-BASE_URL = "http://8.222.182.223:8081"
+# এই লাইনগুলো যোগ করুন (লাইন 20 এর পরে)
+import os
+from dotenv import load_dotenv
+
+# .env ফাইল থেকে ভেরিয়েবল লোড
+load_dotenv()
+
+# এনভায়রনমেন্ট ভেরিয়েবল থেকে পড়ুন
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
+BASE_URL = os.environ.get("BASE_URL", "http://8.222.182.223:8081")
 
 # Render-compatible port
 RENDER_PORT = int(os.environ.get("PORT", 10000))
 
 # File paths with Render.com compatibility
-ACCOUNTS_FILE = "/tmp/accounts.json" if 'RENDER' in os.environ else "accounts.json"
-STATS_FILE = "/tmp/stats.json" if 'RENDER' in os.environ else "stats.json"
-OTP_STATS_FILE = "/tmp/otp_stats.json" if 'RENDER' in os.environ else "otp_stats.json"
-SETTINGS_FILE = "/tmp/settings.json" if 'RENDER' in os.environ else "settings.json"
-USD_TO_BDT = 125  # Exchange rate
+if 'RENDER' in os.environ:
+    ACCOUNTS_FILE = "/tmp/accounts.json"
+    STATS_FILE = "/tmp/stats.json"
+    OTP_STATS_FILE = "/tmp/otp_stats.json"
+    SETTINGS_FILE = "/tmp/settings.json"
+else:
+    ACCOUNTS_FILE = "accounts.json"
+    STATS_FILE = "stats.json"
+    OTP_STATS_FILE = "otp_stats.json"
+    SETTINGS_FILE = "settings.json"
 
-ADMIN_ID = 5624278091
+USD_TO_BDT = 125  # Exchange rate
 MAX_PER_ACCOUNT = 5
+
 
 # Status map
 status_map = {
