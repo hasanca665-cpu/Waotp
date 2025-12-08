@@ -27,7 +27,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = "8269172542:AAF3TCdv4IouC9x0B3xs7jQN2eWHx2ces1U"
+BOT_TOKEN = "8269172542:AAFzjGa-ATGCxkcp2lA2VCcbDx6XyEb_lNI"
 BASE_URL = "http://8.222.182.223:8081"
 
 # Render-compatible port
