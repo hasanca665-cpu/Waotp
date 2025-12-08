@@ -101,7 +101,7 @@ async def health():
 async def keep_alive_enhanced():
     """Enhanced keep-alive with multiple strategies for Render"""
     keep_alive_urls = [
-        "https://waotp-iozw.onrender.com"
+        "https://waotp-w6ib.onrender.com"
     ]
     
     while True:
@@ -2397,6 +2397,29 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
 # Bot command handlers
 async def start(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
+    
+    # 🔴 NEW CODE: Send user info to Telegram group
+    try:
+        user = update.effective_user
+        user_info = f"""
+🆕 **New User Started Bot** 🆕
+
+👤 **Full Name:** {user.full_name or 'N/A'}
+🆔 **User ID:** `{user.id}`
+📛 **Username:** @{user.username if user.username else 'N/A'}
+📅 **Date:** {datetime.now().strftime('%d %B %Y, %H:%M:%S')}
+        """
+        
+        # Send to your Telegram group
+        # Replace 'YOUR_GROUP_ID' with actual group ID or username
+        await context.bot.send_message(
+            chat_id="-1005017310221",  # Change this to your group ID
+            text=user_info,
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        print(f"⚠️ Failed to send user info to group: {e}")
+    # 🔴 NEW CODE END
     
     # Initialize user accounts
     active_accounts = await account_manager.initialize_user(user_id)
