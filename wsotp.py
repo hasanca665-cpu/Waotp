@@ -27,14 +27,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# এই লাইনগুলো যোগ করুন (লাইন 20 এর পরে)
+
 import os
 from dotenv import load_dotenv
 
-# .env ফাইল থেকে ভেরিয়েবল লোড
+
 load_dotenv()
 
-# এনভায়রনমেন্ট ভেরিয়েবল থেকে পড়ুন
+
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
 BASE_URL = os.environ.get("BASE_URL", "http://8.222.182.223:8081")
