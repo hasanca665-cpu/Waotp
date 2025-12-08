@@ -1001,7 +1001,7 @@ async def track_status_optimized(context: CallbackContext):
                     print(f"❌ Final message update failed for {phone}: {e}")
             return
         
-        if checks >= 120:
+        if checks >= 240:
             account_manager.release_token(token)
             # Remove from active numbers if exists
             if phone in active_numbers:
