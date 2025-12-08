@@ -1312,66 +1312,115 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
     if not context.args:
         await update.message.reply_text(
             "✨ **Set Settlement Rate** ✨\n\n"
-            "📝 **Usage:** `/setrate amount [date]`\n\n"
+            "📝 **Usage:** `/setrate amount [date] [country...]`\n"
+            "📢 **Notice:** `/setrate notice Your message here`\n\n"
             "📌 **Examples:**\n"
-            "• `/setrate 0.08` (Today's date)\n"
-            "• `/setrate 0.08 2/12` (2nd December)\n"
-            "• `/setrate 0.08 2023-12-02` (2nd Dec 2023)\n\n"
+            "• `/setrate 0.08` (Today, all countries)\n"
+            "• `/setrate 0.08 2/12` (2nd Dec, all countries)\n"
+            "• `/setrate 0.08 Canada` (Today, Canada only)\n"
+            "• `/setrate 0.08 Canada Nigeria` (Today, Canada & Nigeria)\n"
+            "• `/setrate 0.08 2/12 Canada` (2nd Dec, Canada only)\n"
+            "• `/setrate notice Payment will be sent tomorrow` (Send notice)\n\n"
             "💡 **Note:** Date format: DD/MM or YYYY-MM-DD"
         )
         return
         
     try:
-        # Parse rate
+        # Check if this is a notice command
+        if context.args[0].lower() == 'notice':
+            notice_message = ' '.join(context.args[1:])
+            if not notice_message:
+                await update.message.reply_text("❌ Please provide a notice message!")
+                return
+            
+            accounts = load_accounts()
+            sent_count = 0
+            
+            processing_msg = await update.message.reply_text(f"📢 Sending notice to all users...")
+            
+            for user_id_str in accounts.keys():
+                if user_id_str == str(ADMIN_ID):
+                    continue
+                
+                try:
+                    await context.bot.send_message(
+                        int(user_id_str),
+                        f"📢 **Admin Notice** 📢\n\n"
+                        f"{notice_message}\n\n"
+                        f"📅 Date: {datetime.now().strftime('%d %B %Y')}"
+                    )
+                    sent_count += 1
+                    await asyncio.sleep(0.5)
+                except Exception as e:
+                    print(f"❌ Could not send notice to user {user_id_str}: {e}")
+            
+            await processing_msg.edit_text(
+                f"✅ **Notice Sent Successfully!**\n\n"
+                f"📢 **Message:** {notice_message}\n"
+                f"👥 **Sent to:** {sent_count} users\n"
+                f"⏰ **Time:** {datetime.now().strftime('%H:%M:%S')}"
+            )
+            return
+        
+        # Parse rate (first argument)
         new_rate = float(context.args[0])
         if new_rate <= 0:
             await update.message.reply_text("❌ Rate must be greater than 0!")
             return
         
-        # Parse date (default: today)
+        # Initialize variables
         target_date = datetime.now().date()
         date_provided = False
+        countries = []
         
-        if len(context.args) > 1:
-            date_str = context.args[1]
-            date_provided = True
+        # Parse remaining arguments
+        remaining_args = context.args[1:]
+        
+        # Check for date in arguments
+        if remaining_args:
+            # Try to parse first argument as date
+            first_arg = remaining_args[0]
+            date_str = None
             
-            try:
-                # Try different date formats
-                if '/' in date_str:
-                    # Format: 2/12 or 02/12
-                    parts = date_str.split('/')
-                    if len(parts) == 2:
-                        day, month = parts
-                        if len(day) == 1:
-                            day = '0' + day
-                        if len(month) == 1:
-                            month = '0' + month
-                        current_year = datetime.now().year
-                        target_date = datetime.strptime(f"{day}/{month}/{current_year}", "%d/%m/%Y").date()
-                    else:
-                        await update.message.reply_text("❌ Invalid date format! Use: 2/12 or 02/12")
-                        return
-                elif '-' in date_str:
-                    # Format: 2023-12-02 or 12-02
-                    if len(date_str) == 5:  # 12-02 format
-                        month, day = date_str.split('-')
-                        current_year = datetime.now().year
-                        target_date = datetime.strptime(f"{current_year}-{month}-{day}", "%Y-%m-%d").date()
-                    else:
-                        target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-                else:
+            # Check if first argument looks like a date
+            if '/' in first_arg or '-' in first_arg:
+                date_str = first_arg
+                remaining_args = remaining_args[1:]  # Remove date from list
+            
+            if date_str:
+                date_provided = True
+                try:
+                    if '/' in date_str:
+                        # Format: 2/12 or 02/12
+                        parts = date_str.split('/')
+                        if len(parts) == 2:
+                            day, month = parts
+                            if len(day) == 1:
+                                day = '0' + day
+                            if len(month) == 1:
+                                month = '0' + month
+                            current_year = datetime.now().year
+                            target_date = datetime.strptime(f"{day}/{month}/{current_year}", "%d/%m/%Y").date()
+                        else:
+                            await update.message.reply_text("❌ Invalid date format! Use: 2/12 or 02/12")
+                            return
+                    elif '-' in date_str:
+                        # Format: 2023-12-02 or 12-02
+                        if len(date_str) == 5:  # 12-02 format
+                            month, day = date_str.split('-')
+                            current_year = datetime.now().year
+                            target_date = datetime.strptime(f"{current_year}-{month}-{day}", "%Y-%m-%d").date()
+                        else:
+                            target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                except Exception as e:
                     await update.message.reply_text(
-                        "❌ Invalid date format!\n"
-                        "Use: 2/12 or 2023-12-02"
+                        f"❌ Date parsing error: {e}\n"
+                        "Use format: 2/12 or 2023-12-02"
                     )
                     return
-            except Exception as e:
-                await update.message.reply_text(
-                    f"❌ Date parsing error: {e}\n"
-                    "Use format: 2/12 or 2023-12-02"
-                )
-                return
+        
+        # Remaining arguments are countries
+        countries = [country.title() for country in remaining_args]
         
         settings = load_settings()
         old_rate = settings.get('settlement_rate', 0.10)
@@ -1379,11 +1428,22 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
         target_date_str = target_date.strftime('%Y-%m-%d')
         target_date_display = target_date.strftime('%d %B %Y')
         
-        # Beautiful processing message with emojis
+        # Prepare filter message
+        filter_message = ""
+        if countries:
+            if len(countries) == 1:
+                filter_message = f"🌍 **Country Filter:** {countries[0]} only"
+            else:
+                filter_message = f"🌍 **Countries:** {', '.join(countries)}"
+        else:
+            filter_message = "🌍 **All Countries**"
+        
+        # Beautiful processing message
         processing_msg = await update.message.reply_text(
             f"🔄 **Processing Settlement Rate Update**\n\n"
             f"📅 **Date:** {target_date_display}\n"
             f"💰 **New Rate:** ${new_rate:.2f}\n"
+            f"{filter_message}\n"
             f"⏳ **Status:** Initializing users..."
         )
         
@@ -1394,18 +1454,19 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
         total_bdt = 0
         USD_TO_BDT = 125
         
-        # Counters for statistics
+        # Counters
         users_processed = 0
         users_token_refreshed = 0
         users_with_settlements = 0
         users_failed = 0
         
-        # Update processing message with progress
+        # Update progress
         await processing_msg.edit_text(
             f"🔄 **Processing Settlement Rate Update**\n\n"
             f"📅 **Date:** {target_date_display}\n"
             f"💰 **New Rate:** ${new_rate:.2f}\n"
-            f"⏳ **Status:** Checking user accounts ({users_processed} users)..."
+            f"{filter_message}\n"
+            f"⏳ **Status:** Checking user accounts..."
         )
         
         for user_id_str, user_accounts in accounts.items():
@@ -1418,15 +1479,16 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             users_processed += 1
             username = user_accounts[0].get('username', 'Unknown')
             
-            # Update progress every 5 users
-            if users_processed % 5 == 0:
+            # Update progress
+            if users_processed % 3 == 0:
                 try:
                     await processing_msg.edit_text(
                         f"🔄 **Processing Settlement Rate Update**\n\n"
                         f"📅 **Date:** {target_date_display}\n"
-                        f"💰 **Rate:** ${new_rate:.2f}\n"
-                        f"⏳ **Status:** Processing {users_processed}/{len(accounts)-1} users...\n"
-                        f"✅ **Success:** {users_with_settlements} users"
+                        f"💰 **New Rate:** ${new_rate:.2f}\n"
+                        f"{filter_message}\n"
+                        f"⏳ **Status:** Processing user {users_processed}...\n"
+                        f"✅ **Found:** {users_with_settlements} settlements"
                     )
                 except:
                     pass
@@ -1435,7 +1497,6 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             user_token = None
             token_refreshed = False
             
-            # Check if user has active token
             if user_id_str in account_manager.user_tokens and account_manager.user_tokens[user_id_str]:
                 user_token = account_manager.user_tokens[user_id_str][0]
                 
@@ -1443,8 +1504,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 async with aiohttp.ClientSession() as session:
                     status_code, _, _ = await get_status_async(session, user_token, "0000000000")
                 
-                if status_code == -1:  # Token expired
-                    print(f"🔄 Token expired for user {username}, attempting auto-login...")
+                if status_code == -1:
                     user_token = None
             
             # If no valid token, try to login
@@ -1455,21 +1515,17 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                     
                     token, api_user_id, nickname = await login_api_async(acc['username'], acc['password'])
                     if token:
-                        # Update account with new token
                         acc['token'] = token
                         acc['api_user_id'] = api_user_id
                         acc['nickname'] = nickname
                         acc['last_login'] = datetime.now().isoformat()
                         
-                        # Update in account manager
                         user_token = token
                         token_refreshed = True
                         users_token_refreshed += 1
-                        print(f"✅ Auto-login successful for {username}")
                         break
             
             if not user_token:
-                print(f"❌ Auto-login failed for user {username}")
                 users_failed += 1
                 continue
             
@@ -1484,25 +1540,19 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                     break
             
             if not api_user_id:
-                print(f"❌ No API user ID found for {username}")
                 users_failed += 1
                 continue
             
-            # STEP 2: Fetch settlements
+            # STEP 2: Fetch settlements with country filter
             try:
                 async with aiohttp.ClientSession() as session:
                     settlement_data, error = await get_user_settlements(session, user_token, str(api_user_id), page=1, page_size=100)
                 
-                if error:
-                    print(f"❌ Settlement fetch error for {username}: {error}")
-                    users_failed += 1
+                if error or not settlement_data or not settlement_data.get('records'):
                     continue
                 
-                if not settlement_data or not settlement_data.get('records'):
-                    continue
-                
-                # Filter for target date
-                target_date_settlements = []
+                # Filter settlements
+                filtered_settlements = []
                 for record in settlement_data.get('records', []):
                     gmt_create = record.get('gmtCreate')
                     if not gmt_create:
@@ -1515,39 +1565,56 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                         else:
                             record_date = datetime.strptime(gmt_create, '%Y-%m-%d %H:%M:%S').date()
                         
-                        if record_date == target_date:
-                            target_date_settlements.append(record)
+                        # Check date
+                        if record_date != target_date:
+                            continue
+                        
+                        # Get country
+                        country = record.get('countryName') or record.get('country') or 'Unknown'
+                        
+                        # Check country filter
+                        if countries and country not in countries:
+                            continue
+                        
+                        filtered_settlements.append({
+                            'record': record,
+                            'date': record_date,
+                            'country': country,
+                            'count': record.get('count', 0)
+                        })
+                        
                     except Exception as e:
-                        print(f"⚠️ Date parsing error for {username}: {e}")
                         continue
                 
-                if not target_date_settlements:
+                if not filtered_settlements:
                     continue
                 
                 users_with_settlements += 1
                 
+                # Group by country
+                country_totals = {}
+                for item in filtered_settlements:
+                    country = item['country']
+                    if country not in country_totals:
+                        country_totals[country] = 0
+                    country_totals[country] += item['count']
+                
                 # Calculate totals
-                total_count = sum(record.get('count', 0) for record in target_date_settlements)
-                
-                if total_count <= 0:
-                    continue
-                
+                total_count = sum(country_totals.values())
                 total_usd_user = total_count * new_rate
                 total_bdt_user = total_usd_user * USD_TO_BDT
-                
-                # Get country
-                country = target_date_settlements[0].get('countryName', 'N/A') or target_date_settlements[0].get('country', 'N/A')
                 
                 user_summary = {
                     'user_id': user_id_str,
                     'username': username,
                     'api_user_id': api_user_id,
                     'settlement_date': target_date_display,
-                    'count': total_count,
-                    'country': country,
+                    'countries': list(country_totals.keys()),
+                    'country_totals': country_totals,
+                    'total_count': total_count,
                     'total_usd': total_usd_user,
                     'total_bdt': total_bdt_user,
-                    'num_records': len(target_date_settlements),
+                    'num_records': len(filtered_settlements),
                     'token_refreshed': token_refreshed
                 }
                 
@@ -1557,7 +1624,6 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 total_bdt += total_bdt_user
                 
             except Exception as e:
-                print(f"❌ Error processing {username}: {e}")
                 users_failed += 1
                 continue
         
@@ -1567,21 +1633,33 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
         settings['updated_by'] = ADMIN_ID
         save_settings(settings)
         
-        # STEP 3: Send beautiful notifications to users
+        # STEP 3: Send notifications to users
         notified_users = 0
         for user_summary in all_users_summary:
             try:
-                # Prepare beautiful message
-                message = "✨ **Settlement Notifications** ✨\n\n"
+                # Prepare message
+                message = "✨ **Settlement Rate Update** ✨\n\n"
                 message += "📢 **Notification for Your Account**\n\n"
                 
-                message += "📋 **Account Details:**\n"
+                message += "📋 **Details:**\n"
                 message += f"• 📅 **Date:** {user_summary['settlement_date']}\n"
-                message += f"• 🌍 **Country:** {user_summary['country']}\n"
-                message += f"• 🔢 **Today Account:** {user_summary['count']}\n\n"
+                
+                if len(user_summary['countries']) == 1:
+                    message += f"• 🌍 **Country:** {user_summary['countries'][0]}\n"
+                else:
+                    message += f"• 🌍 **Countries:** {', '.join(user_summary['countries'])}\n"
+                
+                # Show country-wise breakdown if multiple countries
+                if len(user_summary['country_totals']) > 1:
+                    message += "\n📊 **Country Breakdown:**\n"
+                    for country, count in user_summary['country_totals'].items():
+                        country_usd = count * new_rate
+                        message += f"• {country}: {count} counts = ${country_usd:.2f}\n"
+                
+                message += f"• 🔢 **Total Count:** {user_summary['total_count']}\n\n"
                 
                 message += "💰 **Payment Calculation:**\n"
-                message += f"• 📈 **Rate:** ${new_rate:.2f}\n"
+                message += f"• 📈 **New Rate:** ${new_rate:.2f}\n"
                 message += f"• 💵 **Total USD:** ${user_summary['total_usd']:.2f}\n"
                 message += f"• 🇧🇩 **Total BDT:** {user_summary['total_bdt']:.2f} BDT\n\n"
                 
@@ -1589,9 +1667,8 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                     message += "🔄 **Note:** Your account was auto-refreshed\n\n"
                 
                 message += "💳 **Payment Information:**\n"
-                message += "পেমেন্ট সাধারণত সকাল ৫টা–৬টার মধ্যে করা হয়।\n"
-                
-                message += "পেমেন্ট না পেলে অ্যাডমিনের সাথে যোগাযোগ করুন।"
+                message += "Please contact the admin to receive your payment.\n\n"
+                message += "📞 **Contact Admin for Payment Collection**"
                 
                 await context.bot.send_message(
                     int(user_summary['user_id']),
@@ -1599,18 +1676,19 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                     parse_mode='Markdown'
                 )
                 notified_users += 1
-                await asyncio.sleep(1)  # Avoid rate limiting
+                await asyncio.sleep(1)
             except Exception as e:
-                print(f"❌ Notification failed for user {user_summary['user_id']}: {e}")
+                print(f"❌ Notification failed: {e}")
         
-        # STEP 4: Prepare beautiful admin summary
+        # STEP 4: Prepare admin summary
         summary_message = "🎯 **Settlement Rate Update Complete** 🎯\n\n"
         
         summary_message += "📊 **Operation Summary:**\n"
         summary_message += f"• 📅 **Target Date:** {target_date_display}\n"
         summary_message += f"• 🔄 **Previous Rate:** ${old_rate:.2f}\n"
         summary_message += f"• ✅ **New Rate:** ${new_rate:.2f}\n"
-        summary_message += f"• 💱 **Exchange Rate:** 1 USD = {USD_TO_BDT} BDT\n\n"
+        summary_message += f"• 💱 **Exchange Rate:** 1 USD = {USD_TO_BDT} BDT\n"
+        summary_message += f"• {filter_message}\n\n"
         
         summary_message += "📈 **Processing Statistics:**\n"
         summary_message += f"• 👥 **Total Users:** {users_processed}\n"
@@ -1627,12 +1705,41 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 summary_message += (
                     f"**{i}. {user_summary['username']}**{refresh_icon}\n"
                     f"   ├─ 👤 **User ID:** {user_summary['api_user_id']}\n"
-                    f"   ├─ 🌍 **Country:** {user_summary['country']}\n"
-                    f"   ├─ 🔢 **Count:** {user_summary['count']}\n"
+                )
+                
+                if len(user_summary['countries']) == 1:
+                    summary_message += f"   ├─ 🌍 **Country:** {user_summary['countries'][0]}\n"
+                else:
+                    summary_message += f"   ├─ 🌍 **Countries:** {', '.join(user_summary['countries'])}\n"
+                
+                # Add country breakdown if multiple countries
+                if len(user_summary['country_totals']) > 1:
+                    for country, count in user_summary['country_totals'].items():
+                        summary_message += f"   ├─ • {country}: {count}\n"
+                
+                summary_message += (
+                    f"   ├─ 🔢 **Total Count:** {user_summary['total_count']}\n"
                     f"   ├─ 💰 **Rate:** ${new_rate:.2f}\n"
                     f"   ├─ 💵 **USD:** ${user_summary['total_usd']:.2f}\n"
                     f"   └─ 🇧🇩 **BDT:** {user_summary['total_bdt']:.2f} BDT\n\n"
                 )
+            
+            # Calculate total by country
+            if countries and len(countries) > 0:
+                country_summary = {}
+                for user_summary in all_users_summary:
+                    for country, count in user_summary['country_totals'].items():
+                        if country not in country_summary:
+                            country_summary[country] = 0
+                        country_summary[country] += count
+                
+                if country_summary:
+                    summary_message += "🌍 **Country Summary:**\n"
+                    for country, count in country_summary.items():
+                        country_usd = count * new_rate
+                        country_bdt = country_usd * USD_TO_BDT
+                        summary_message += f"• **{country}:** {count} counts = {country_bdt:.2f} BDT\n"
+                    summary_message += "\n"
             
             summary_message += "💰 **Financial Summary:**\n"
             summary_message += f"• 👥 **Total Users:** {total_users}\n"
@@ -1643,28 +1750,31 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             summary_message += "✅ **Operation Successful!**\n"
             summary_message += f"All notifications have been sent to {notified_users} users."
         else:
-            if date_provided:
-                summary_message += f"📭 **No settlements found for {target_date_display}**\n"
+            if countries:
+                summary_message += f"📭 **No settlements found for {target_date_display} in {', '.join(countries)}**\n"
             else:
-                summary_message += f"📭 **No settlements found for today**\n"
-            summary_message += f"ℹ️ **Rate Updated:** ${new_rate:.2f} (for future settlements)\n\n"
-            summary_message += "💡 **Note:** The new rate will apply to future settlement calculations."
+                summary_message += f"📭 **No settlements found for {target_date_display}**\n"
+            summary_message += f"ℹ️ **Rate Updated:** ${new_rate:.2f} (for future settlements)"
         
         # Add timestamp
-        summary_message += f"\n⏰ **Completed at:** {datetime.now().strftime('%H:%M:%S')}"
+        summary_message += f"\n\n⏰ **Completed at:** {datetime.now().strftime('%H:%M:%S')}"
         
         await processing_msg.edit_text(summary_message, parse_mode='Markdown')
         
-        # Send detailed log to admin in a separate message
+        # Send detailed payment summary
         if all_users_summary:
             log_message = "📋 **Detailed Payment Summary** 📋\n\n"
             log_message += f"📅 **Date:** {target_date_display}\n"
             log_message += f"💰 **Rate:** ${new_rate:.2f}\n"
+            
+            if countries:
+                log_message += f"🌍 **Countries:** {', '.join(countries)}\n"
+            
             log_message += f"💱 **1 USD =** {USD_TO_BDT} BDT\n\n"
             
             log_message += "👥 **User Payment Breakdown:**\n"
             for user_summary in all_users_summary:
-                log_message += f"• **{user_summary['username']}:** {user_summary['count']} counts = {user_summary['total_bdt']:.2f} BDT\n"
+                log_message += f"• **{user_summary['username']}:** {user_summary['total_count']} counts = {user_summary['total_bdt']:.2f} BDT\n"
             
             log_message += f"\n💰 **Total Payment Due:** {total_bdt:.2f} BDT"
             
@@ -1679,12 +1789,15 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
         
     except ValueError:
         await update.message.reply_text(
-            "❌ **Invalid Rate Format!**\n\n"
-            "📝 **Usage:** `/setrate amount [date]`\n\n"
+            "❌ **Invalid Command Format!**\n\n"
+            "📝 **Usage:** `/setrate amount [date] [country...]`\n"
+            "📢 **Notice:** `/setrate notice Your message`\n\n"
             "✅ **Examples:**\n"
             "• `/setrate 0.08`\n"
-            "• `/setrate 0.08 2/12`\n"
-            "• `/setrate 0.08 2023-12-02`"
+            "• `/setrate 0.08 Canada`\n"
+            "• `/setrate 0.08 Canada Nigeria`\n"
+            "• `/setrate 0.08 2/12 Canada`\n"
+            "• `/setrate notice Payment tomorrow`"
         )
 
 # Admin view specific user settlements
