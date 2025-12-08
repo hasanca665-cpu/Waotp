@@ -8,3 +8,4 @@ PyJWT
 python-dotenv
 pytz
 flask
+python-dotenv
