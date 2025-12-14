@@ -229,6 +229,8 @@ def load_stats():
                                 "total_deleted": 0, 
                                 "today_checked": 0, 
                                 "today_deleted": 0,
+                                "yesterday_checked": 0,
+                                "yesterday_deleted": 0,
                                 "last_reset": datetime.now().isoformat()
                             }
             except:
@@ -238,6 +240,8 @@ def load_stats():
             "total_deleted": 0, 
             "today_checked": 0, 
             "today_deleted": 0,
+            "yesterday_checked": 0,
+            "yesterday_deleted": 0,
             "last_reset": datetime.now().isoformat()
         }
     except Exception as e:
@@ -247,6 +251,8 @@ def load_stats():
             "total_deleted": 0, 
             "today_checked": 0, 
             "today_deleted": 0,
+            "yesterday_checked": 0,
+            "yesterday_deleted": 0,
             "last_reset": datetime.now().isoformat()
         }
 
@@ -280,6 +286,7 @@ def load_otp_stats():
         return {
             "total_success": 0,
             "today_success": 0,
+            "yesterday_success": 0,
             "user_stats": {},
             "last_reset": datetime.now().isoformat()
         }
@@ -288,6 +295,7 @@ def load_otp_stats():
         return {
             "total_success": 0,
             "today_success": 0,
+            "yesterday_success": 0,
             "user_stats": {},
             "last_reset": datetime.now().isoformat()
         }
@@ -901,29 +909,36 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
                         success, message = await submit_otp_async(session, token, phone, text)
                     
                     if success:
-                        # Update OTP stats
-                        otp_stats = load_otp_stats()
-                        otp_stats["total_success"] += 1
-                        otp_stats["today_success"] += 1
-                        
-                        # Update user stats
-                        user_id_str = str(user_id)
-                        if user_id_str not in otp_stats["user_stats"]:
-                            otp_stats["user_stats"][user_id_str] = {
-                                "total_success": 0,
-                                "username": update.effective_user.username or update.effective_user.first_name
-                            }
-                        otp_stats["user_stats"][user_id_str]["total_success"] += 1
-                        
-                        save_otp_stats(otp_stats)
-                        
-                        # Delete the processing message immediately - NO SUCCESS MESSAGE
-                        await processing_msg.delete()
-                        
-                        # Check status immediately after OTP submission
+                        # ✅ IMPORTANT: Check status after OTP submission
                         async with aiohttp.ClientSession() as session:
                             status_code, status_name, record_id = await get_status_async(session, token, phone)
                         
+                        # ✅ শুধুমাত্র status 1 (Success) হলে count করবে
+                        if status_code == 1:
+                            # Update OTP stats
+                            otp_stats = load_otp_stats()
+                            otp_stats["total_success"] += 1
+                            otp_stats["today_success"] += 1
+                            
+                            # Update user stats
+                            user_id_str = str(user_id)
+                            if user_id_str not in otp_stats["user_stats"]:
+                                otp_stats["user_stats"][user_id_str] = {
+                                    "total_success": 0,
+                                    "today_success": 0,
+                                    "yesterday_success": 0,
+                                    "username": update.effective_user.username or update.effective_user.first_name,
+                                    "full_name": update.effective_user.full_name
+                                }
+                            otp_stats["user_stats"][user_id_str]["total_success"] += 1
+                            otp_stats["user_stats"][user_id_str]["today_success"] += 1
+                            
+                            save_otp_stats(otp_stats)
+                        
+                        # Delete the processing message
+                        await processing_msg.delete()
+                        
+                        # Update message with current status
                         if status_code is not None:
                             await context.bot.edit_message_text(
                                 chat_id=update.effective_chat.id,
@@ -1095,6 +1110,18 @@ async def reset_daily_stats(context: CallbackContext):
     stats = load_stats()
     otp_stats = load_otp_stats()
     
+    # Save yesterday's stats
+    stats["yesterday_checked"] = stats.get("today_checked", 0)
+    stats["yesterday_deleted"] = stats.get("today_deleted", 0)
+    
+    otp_stats["yesterday_success"] = otp_stats.get("today_success", 0)
+    
+    # Save user-specific yesterday stats
+    for user_id_str, user_data in otp_stats.get("user_stats", {}).items():
+        user_data["yesterday_success"] = user_data.get("today_success", 0)
+        user_data["today_success"] = 0
+    
+    # Reset today's stats
     stats["today_checked"] = 0
     stats["today_deleted"] = 0
     stats["last_reset"] = datetime.now().isoformat()
@@ -2360,39 +2387,183 @@ async def admin_list_accounts(update: Update, context: CallbackContext) -> None:
     
     await update.message.reply_text(message)
 
+# Statistics Dashboard - UPDATED VERSION
+async def show_stats(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    user_name = update.effective_user.full_name or "User"
+    
+    stats = load_stats()
+    otp_stats = load_otp_stats()
+    
+    remaining = account_manager.get_user_remaining_checks(user_id)
+    active_accounts_count = account_manager.get_user_active_accounts_count(user_id)
+    total_slots = active_accounts_count * MAX_PER_ACCOUNT
+    used_slots = total_slots - remaining if total_slots > 0 else 0
+    
+    # Get user-specific stats
+    user_id_str = str(user_id)
+    user_otp_info = otp_stats.get('user_stats', {}).get(user_id_str, {})
+    
+    user_today_otp = user_otp_info.get('today_success', 0)
+    user_yesterday_otp = user_otp_info.get('yesterday_success', 0)
+    
+    if user_id == ADMIN_ID:
+        message = f"📊 Statistics Dashboard 👑\n\n"
+        
+        # Get settlement rate
+        settings = load_settings()
+        rate = settings.get('settlement_rate', 0.10)
+        
+        message += f"💰 Settlement Rate: ${rate:.2f}\n"
+        message += f"📱 Your Account Status:\n"
+        message += f"• Active Login: {active_accounts_count}\n"
+        message += f"• Checks Used: {used_slots}/{total_slots}\n"
+        message += f"• Remaining: {remaining}\n\n"
+        
+        message += f"📈 Today's Added: {stats.get('today_checked', 0)}\n"
+        message += f"📈 Yesterday's Added: {stats.get('yesterday_checked', 0)}\n\n"
+        
+        message += f"✅ OTP Success:\n"
+        message += f"• Today: {otp_stats.get('today_success', 0)}\n"
+        message += f"• Yesterday: {otp_stats.get('yesterday_success', 0)}"
+    else:
+        message = (
+            f"📊 Statistics Dashboard\n\n"
+            f"👤 User: {user_name}\n\n"
+            f"📱 Account Status:\n"
+            f"• Active Login: {active_accounts_count}\n"
+            f"• Checks Used: {used_slots}/{total_slots}\n"
+            f"• Remaining: {remaining}\n\n"
+            f"📈 Today's Added: {stats.get('today_checked', 0)}\n"
+            f"📈 Yesterday's Added: {stats.get('yesterday_checked', 0)}\n\n"
+            f"✅ OTP Success:\n"
+            f"• Today: {user_today_otp}\n"
+            f"• Yesterday: {user_yesterday_otp}\n\n"
+            f"⏰ Last Updated: {datetime.now().strftime('%d %b %Y, %H:%M')}"
+        )
+    
+    await update.message.reply_text(message)
+
+# Admin User Statistics with Pagination - UPDATED VERSION
 async def admin_user_stats(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id != ADMIN_ID:
         await update.message.reply_text("❌ Admin only command!")
         return
-        
-    all_stats = account_manager.get_all_users_stats()
+    
+    # Get page number from args
+    page = 1
+    if context.args:
+        try:
+            page = int(context.args[0])
+            if page < 1:
+                page = 1
+        except:
+            pass
+    
+    processing_msg = await update.message.reply_text("🔄 Loading user statistics...")
+    
+    accounts = load_accounts()
+    stats = load_stats()
     otp_stats = load_otp_stats()
     
-    if not all_stats:
-        await update.message.reply_text("❌ No user stats available!")
+    # Remove admin from accounts
+    user_accounts = {k: v for k, v in accounts.items() if k != str(ADMIN_ID)}
+    
+    if not user_accounts:
+        await processing_msg.edit_text("❌ No user stats available!")
         return
     
-    message = "📊 User Statistics Dashboard 👑\n\n"
+    # Calculate totals
+    total_users = len(user_accounts)
+    total_today_added = stats.get('today_checked', 0)
+    total_yesterday_added = stats.get('yesterday_checked', 0)
+    total_today_otp = otp_stats.get('today_success', 0)
+    total_yesterday_otp = otp_stats.get('yesterday_success', 0)
     
-    for user_id_str, stats in all_stats.items():
-        user_otp_stats = otp_stats.get('user_stats', {}).get(user_id_str, {})
-        total_otp = user_otp_stats.get('total_success', 0)
-        username = user_otp_stats.get('username', stats.get('username', 'Unknown'))
+    # Pagination
+    users_per_page = 30
+    all_user_ids = list(user_accounts.keys())
+    
+    total_pages = (len(all_user_ids) + users_per_page - 1) // users_per_page
+    
+    # Get users for current page
+    start_idx = (page - 1) * users_per_page
+    end_idx = start_idx + users_per_page
+    page_user_ids = all_user_ids[start_idx:end_idx]
+    
+    message = "📊 User Statistics Dashboard 👑\n"
+    message += f"📄 Page: {page}/{total_pages}\n\n"
+    
+    message += f"👥 Total Users: {total_users}\n"
+    message += f"📊 Total Added (Today): {total_today_added}\n"
+    message += f"📊 Total Added (Yesterday): {total_yesterday_added}\n"
+    message += f"✅ Total OTP Success (Today): {total_today_otp}\n"
+    message += f"✅ Total OTP Success (Yesterday): {total_yesterday_otp}\n\n"
+    
+    for user_id_str in page_user_ids:
+        if user_id_str == str(ADMIN_ID):
+            continue
+            
+        user_info = user_accounts[user_id_str]
+        if not user_info:
+            continue
         
-        message += f"👤 User: {username}\n"
-        message += f"🆔 ID: {user_id_str}\n"
-        message += f"📱 Accounts: {stats['total_accounts']} | ✅ Active: {stats['active_accounts']} | 🔓 Logged: {stats['logged_in_accounts']}\n"
-        message += f"✅ OTP Success: {total_otp}\n"
+        # Get username from first account
+        username = user_info[0].get('username', 'Unknown') if user_info else 'Unknown'
+        
+        # Get user OTP stats
+        user_otp_info = otp_stats.get('user_stats', {}).get(user_id_str, {})
+        user_today_otp = user_otp_info.get('today_success', 0)
+        user_yesterday_otp = user_otp_info.get('yesterday_success', 0)
+        user_full_name = user_otp_info.get('full_name', '')
         
         # Calculate remaining checks
         remaining = account_manager.get_user_remaining_checks(int(user_id_str))
-        total_slots = stats['logged_in_accounts'] * MAX_PER_ACCOUNT
+        logged_in = account_manager.get_user_active_accounts_count(int(user_id_str))
+        total_slots = logged_in * MAX_PER_ACCOUNT
         used_slots = total_slots - remaining if total_slots > 0 else 0
         
-        message += f"⚡ Checks: {used_slots}/{total_slots} | 📈 Remaining: {remaining}\n"
-        message += "───\n"
+        # User's today/yesterday added (same as global for now)
+        user_today_added = 0  # Need to track user-specific
+        user_yesterday_added = 0  # Need to track user-specific
+        
+        # Display user info
+        display_name = user_full_name if user_full_name else username
+        message += f"👤 User: {display_name}\n"
+        message += f"🆔 ID: {user_id_str}\n"
+        message += f"📱 Accounts: {len(user_info)} | 🔓 Logged: {logged_in}\n"
+        message += f"📈 Today Added: {user_today_added} | Yesterday: {user_yesterday_added}\n"
+        message += f"✅ OTP Today: {user_today_otp} | Yesterday: {user_yesterday_otp}\n"
+        message += f"────────────────────\n\n"
     
-    await update.message.reply_text(message)
+    # Add pagination buttons if needed
+    keyboard = []
+    row = []
+    
+    if page > 1:
+        row.append(InlineKeyboardButton("⬅️ Previous", callback_data=f"userstats_{page-1}"))
+    
+    if page < total_pages:
+        row.append(InlineKeyboardButton("Next ➡️", callback_data=f"userstats_{page+1}"))
+    
+    if row:
+        keyboard.append(row)
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await processing_msg.edit_text(message, reply_markup=reply_markup)
+    else:
+        await processing_msg.edit_text(message)
+
+# Handle userstats pagination callbacks
+async def handle_userstats_callback(update: Update, context: CallbackContext):
+    query = update.callback_query
+    await query.answer()
+    
+    data = query.data
+    page = int(data.split('_')[1])
+    
+    # Create a fake update with page argument
+    context.args = [str(page)]
+    await admin_user_stats(update, context)
 
 # Bot command handlers
 async def start(update: Update, context: CallbackContext) -> None:
@@ -2471,53 +2642,6 @@ async def start(update: Update, context: CallbackContext) -> None:
         f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code",
         reply_markup=reply_markup
     )
-
-async def show_stats(update: Update, context: CallbackContext) -> None:
-    user_id = update.effective_user.id
-    
-    stats = load_stats()
-    otp_stats = load_otp_stats()
-    
-    remaining = account_manager.get_user_remaining_checks(user_id)
-    total_accounts = account_manager.get_user_accounts_count(user_id)
-    active_accounts_count = account_manager.get_user_active_accounts_count(user_id)
-    
-    # User OTP stats
-    user_otp_total = otp_stats.get('user_stats', {}).get(str(user_id), {}).get('total_success', 0)
-    
-    if user_id == ADMIN_ID:
-        # Get settlement rate
-        settings = load_settings()
-        rate = settings.get('settlement_rate', 0.10)
-        
-        message = (
-            f"📊 Statistics Dashboard 👑\n\n"
-            f"🔢 Total Checked: {stats['total_checked']}\n"
-            f"🗑️ Total Deleted: {stats['total_deleted']}\n"
-            f"📅 Today Checked: {stats['today_checked']}\n"
-            f"🗑️ Today Deleted: {stats['today_deleted']}\n\n"
-            f"✅ OTP Success:\n"
-            f"• Total: {otp_stats['total_success']}\n"
-            f"• Today: {otp_stats['today_success']}\n"
-            f"• Your Total: {user_otp_total}\n\n"
-            f"💰 Settlement Rate: ${rate:.2f}\n\n"
-            f"📱 Your Account Status:\n"
-            f"• Active Login: {active_accounts_count}"
-        )
-    else:
-        message = (
-            f"📊 Statistics Dashboard\n\n"
-            f"🔢 Total Added: {stats['total_checked']}\n"
-            f"📅 Today Added: {stats['today_checked']}\n\n"
-            f"✅ OTP Success:\n"
-            f"• Total: {user_otp_total}\n"
-            f"• Today: {otp_stats['today_success']}\n\n"
-            f"📱 Your Account Status:\n"
-            f"• Total Accounts: {total_accounts}\n"
-            f"• Active Login: {active_accounts_count}"
-        )
-    
-    await update.message.reply_text(message)
 
 async def refresh_server(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
@@ -2762,7 +2886,9 @@ def main():
     application.add_handler(CommandHandler("viewuser", admin_view_user_settlements))
     application.add_handler(CommandHandler("settlements", show_user_settlements))
     application.add_handler(CommandHandler("billing", show_admin_billing_list))
+    application.add_handler(CommandHandler("userstats", admin_user_stats))
     application.add_handler(CallbackQueryHandler(handle_settlement_callback, pattern=r"^(settlement_|billing_|admin_user_)"))
+    application.add_handler(CallbackQueryHandler(handle_userstats_callback, pattern=r"^userstats_"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message_optimized))
     
     if application.job_queue:
