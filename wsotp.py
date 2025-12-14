@@ -880,7 +880,10 @@ account_manager = AccountManager()
 # Track active numbers for OTP submission
 active_numbers = {}
 
-# Handle OTP submission - FIXED: Don't show success message for registered numbers
+# Track number status history to detect status changes
+number_status_history = {}
+
+# Handle OTP submission - FIXED: Count only when status changes to 1
 async def handle_otp_submission(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     text = update.message.text.strip()
@@ -909,36 +912,14 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
                         success, message = await submit_otp_async(session, token, phone, text)
                     
                     if success:
-                        # ✅ IMPORTANT: Check status after OTP submission
+                        # ✅ OTP submit successful, but don't count success yet
+                        # Wait for status to change to 1 in track_status_optimized
+                        await processing_msg.delete()
+                        
+                        # Check current status
                         async with aiohttp.ClientSession() as session:
                             status_code, status_name, record_id = await get_status_async(session, token, phone)
                         
-                        # ✅ শুধুমাত্র status 1 (Success) হলে count করবে
-                        if status_code == 1:
-                            # Update OTP stats
-                            otp_stats = load_otp_stats()
-                            otp_stats["total_success"] += 1
-                            otp_stats["today_success"] += 1
-                            
-                            # Update user stats
-                            user_id_str = str(user_id)
-                            if user_id_str not in otp_stats["user_stats"]:
-                                otp_stats["user_stats"][user_id_str] = {
-                                    "total_success": 0,
-                                    "today_success": 0,
-                                    "yesterday_success": 0,
-                                    "username": update.effective_user.username or update.effective_user.first_name,
-                                    "full_name": update.effective_user.full_name
-                                }
-                            otp_stats["user_stats"][user_id_str]["total_success"] += 1
-                            otp_stats["user_stats"][user_id_str]["today_success"] += 1
-                            
-                            save_otp_stats(otp_stats)
-                        
-                        # Delete the processing message
-                        await processing_msg.delete()
-                        
-                        # Update message with current status
                         if status_code is not None:
                             await context.bot.edit_message_text(
                                 chat_id=update.effective_chat.id,
@@ -956,7 +937,7 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("❌ Please reply to a number message with OTP code.")
 
-# Track status with OTP support - FIXED: Remove success message
+# Track status with OTP support - FIXED: Count success only when status changes to 1
 async def track_status_optimized(context: CallbackContext):
     data = context.job.data
     phone = data['phone']
@@ -966,6 +947,7 @@ async def track_status_optimized(context: CallbackContext):
     checks = data['checks']
     last_status = data.get('last_status', '🔵 Processing...')
     serial_number = data.get('serial_number')
+    last_status_code = data.get('last_status_code')
     
     try:
         async with aiohttp.ClientSession() as session:
@@ -987,7 +969,7 @@ async def track_status_optimized(context: CallbackContext):
                     print(f"❌ Message update failed for {phone}: {e}")
             return
         
-        # Store active number for OTP submission
+        # Store active number for OTP submission if status is 2 (In Progress)
         if status_code == 2:  # In Progress
             active_numbers[phone] = {
                 'token': token,
@@ -995,6 +977,32 @@ async def track_status_optimized(context: CallbackContext):
                 'message_id': data['message_id'],
                 'user_id': user_id
             }
+        
+        # ✅ IMPORTANT: Check if status changed from non-1 to 1 (Success)
+        if status_code == 1 and last_status_code != 1:
+            # This is the first time status changed to 1
+            print(f"🎉 Status changed to SUCCESS for {phone}")
+            
+            # Update OTP stats
+            otp_stats = load_otp_stats()
+            otp_stats["total_success"] += 1
+            otp_stats["today_success"] += 1
+            
+            # Update user stats
+            user_id_str = str(user_id)
+            if user_id_str not in otp_stats["user_stats"]:
+                otp_stats["user_stats"][user_id_str] = {
+                    "total_success": 0,
+                    "today_success": 0,
+                    "yesterday_success": 0,
+                    "username": username,
+                    "full_name": ""
+                }
+            otp_stats["user_stats"][user_id_str]["total_success"] += 1
+            otp_stats["user_stats"][user_id_str]["today_success"] += 1
+            
+            save_otp_stats(otp_stats)
+            print(f"✅ Success count updated for user {user_id_str}")
         
         if status_name != last_status:
             new_text = f"{prefix}{phone} {status_name}"
@@ -1060,7 +1068,8 @@ async def track_status_optimized(context: CallbackContext):
                 data={
                     **data, 
                     'checks': checks + 1, 
-                    'last_status': status_name
+                    'last_status': status_name,
+                    'last_status_code': status_code
                 }
             )
         else:
@@ -1387,7 +1396,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 try:
                     await context.bot.send_message(
                         int(user_id_str),
-                        f"📢 Admin Notice 📢\n\n"
+                        f"📢 **Admin Notice** 📢\n\n"
                         f"{notice_message}\n\n"
                         f"📅 Date: {datetime.now().strftime('%d %B %Y')}"
                     )
@@ -2481,7 +2490,7 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
     total_yesterday_otp = otp_stats.get('yesterday_success', 0)
     
     # Pagination
-    users_per_page = 20
+    users_per_page = 30
     all_user_ids = list(user_accounts.keys())
     
     total_pages = (len(all_user_ids) + users_per_page - 1) // users_per_page
@@ -2523,16 +2532,12 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
         total_slots = logged_in * MAX_PER_ACCOUNT
         used_slots = total_slots - remaining if total_slots > 0 else 0
         
-        # User's today/yesterday added (same as global for now)
-        user_today_added = 0  # Need to track user-specific
-        user_yesterday_added = 0  # Need to track user-specific
-        
         # Display user info
         display_name = user_full_name if user_full_name else username
         message += f"👤 User: {display_name}\n"
         message += f"🆔 ID: {user_id_str}\n"
         message += f"📱 Accounts: {len(user_info)} | 🔓 Logged: {logged_in}\n"
-        message += f"📈 Today Added: {user_today_added} | Yesterday: {user_yesterday_added}\n"
+        message += f"📈 Today Added: {stats.get('today_checked', 0)} | Yesterday: {stats.get('yesterday_checked', 0)}\n"
         message += f"✅ OTP Today: {user_today_otp} | Yesterday: {user_yesterday_otp}\n"
         message += f"────────────────────\n\n"
     
@@ -2740,7 +2745,8 @@ async def process_multiple_numbers(update: Update, context: CallbackContext, tex
                     'checks': 0,
                     'last_status': '🔵 Processing...',
                     'serial_number': index,
-                    'user_id': user_id
+                    'user_id': user_id,
+                    'last_status_code': None  # Track previous status code
                 }
             )
             
@@ -2829,7 +2835,8 @@ async def handle_message_optimized(update: Update, context: CallbackContext) -> 
                         'username': username,
                         'checks': 0,
                         'last_status': '🔵 Processing...',
-                        'user_id': user_id
+                        'user_id': user_id,
+                        'last_status_code': None  # Track previous status code
                     }
                 )
         else:
