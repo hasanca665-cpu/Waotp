@@ -2534,13 +2534,13 @@ async def show_stats(update: Update, context: CallbackContext) -> None:
         # Regular user sees their own stats
         message = (
             f"📊 Statistics Dashboard\n\n"
-            f"👤 User: {user_name}\n\n"
+            f"👤 Name: {user_name}\n\n"
             f"📱 Account Status:\n"
             f"• Active Login: {active_accounts_count}\n"
-            f"• Checks Used: {used_slots}/{total_slots}\n"
+            f"• Processing: {used_slots}/{total_slots}\n"
             f"• Remaining: {remaining}\n\n"
             f"📈 Added Today: {user_today_added}\n"
-           f"✅️ Succeeded Today: {user_today_otp}\n\n"
+            f"✅️ Succeeded Today: {user_today_otp}\n\n"
             f"⏰ Last Updated: {datetime.now().strftime('%d %b %Y, %H:%M')}"
         )
     
@@ -2582,7 +2582,7 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
     total_yesterday_otp = sum(tracking.get("yesterday_success", {}).values())
     
     # Pagination
-    users_per_page = 30
+    users_per_page = 20
     all_user_ids = list(user_accounts.keys())
     
     total_pages = (len(all_user_ids) + users_per_page - 1) // users_per_page
