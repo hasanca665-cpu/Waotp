@@ -1396,7 +1396,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 try:
                     await context.bot.send_message(
                         int(user_id_str),
-                        f"📢 **Admin Notice** 📢\n\n"
+                        f"📢 Admin Notice 📢\n\n"
                         f"{notice_message}\n\n"
                         f"📅 Date: {datetime.now().strftime('%d %B %Y')}"
                     )
@@ -2438,16 +2438,13 @@ async def show_stats(update: Update, context: CallbackContext) -> None:
     else:
         message = (
             f"📊 Statistics Dashboard\n\n"
-            f"👤 User: {user_name}\n\n"
+            f"👤 Name: {user_name}\n\n"
             f"📱 Account Status:\n"
             f"• Active Login: {active_accounts_count}\n"
-            f"• Checks Used: {used_slots}/{total_slots}\n"
+            f"• Processing: {used_slots}/{total_slots}\n"
             f"• Remaining: {remaining}\n\n"
-            f"📈 Today's Added: {stats.get('today_checked', 0)}\n"
-            f"📈 Yesterday's Added: {stats.get('yesterday_checked', 0)}\n\n"
-            f"✅ OTP Success:\n"
-            f"• Today: {user_today_otp}\n"
-            f"• Yesterday: {user_yesterday_otp}\n\n"
+            f"📈 Added Today: {stats.get('today_checked', 0)}\n"
+            f"✅️ Succeeded Today: {user_today_otp}\n\n"
             f"⏰ Last Updated: {datetime.now().strftime('%d %b %Y, %H:%M')}"
         )
     
@@ -2490,7 +2487,7 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
     total_yesterday_otp = otp_stats.get('yesterday_success', 0)
     
     # Pagination
-    users_per_page = 30
+    users_per_page = 20
     all_user_ids = list(user_accounts.keys())
     
     total_pages = (len(all_user_ids) + users_per_page - 1) // users_per_page
