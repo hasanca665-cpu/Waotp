@@ -97,67 +97,6 @@ async def ping():
 async def health():
     return {"status": "healthy", "bot": "online"}
 
-# tracking.json ফাইল অপারেশন
-def load_tracking():
-    try:
-        with open("tracking.json", 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except:
-        # Default structure - শুধু TODAY এর ডাটা
-        return {
-            "today_added_numbers": {},  # আজকে added numbers
-            "today_success_numbers": {},  # আজকে success numbers
-            "today_added": {},  # user-wise today added count
-            "today_success": {},  # user-wise today success count
-            "yesterday_added": {},  # গতকালের added
-            "yesterday_success": {},  # গতকালের success
-            "last_reset": datetime.now().isoformat()
-        }
-
-def save_tracking(tracking):
-    try:
-        with open("tracking.json", 'w', encoding='utf-8') as f:
-            json.dump(tracking, f, indent=4, ensure_ascii=False)
-    except Exception as e:
-        print(f"❌ Error saving tracking: {e}")
-
-# Daily stats reset (Bangladesh Time 4PM)
-async def reset_daily_stats(context: CallbackContext):
-    stats = load_stats()
-    otp_stats = load_otp_stats()
-    tracking = load_tracking()
-    
-    # Save yesterday's stats
-    stats["yesterday_checked"] = stats.get("today_checked", 0)
-    stats["yesterday_deleted"] = stats.get("today_deleted", 0)
-    
-    otp_stats["yesterday_success"] = otp_stats.get("today_success", 0)
-    
-    # Save user-specific yesterday stats
-    tracking["yesterday_added"] = tracking.get("today_added", {})
-    tracking["yesterday_success"] = tracking.get("today_success", {})
-    
-    # Reset today's tracking - শুধু today এর ডাটা ক্লিয়ার হবে
-    tracking["today_added_numbers"] = {}  # শুধু আজকে added numbers
-    tracking["today_success_numbers"] = {}  # শুধু আজকে success numbers
-    tracking["today_added"] = {}  # user-wise today added count
-    tracking["today_success"] = {}  # user-wise today success count
-    tracking["last_reset"] = datetime.now().isoformat()
-    
-    # Reset today's stats
-    stats["today_checked"] = 0
-    stats["today_deleted"] = 0
-    stats["last_reset"] = datetime.now().isoformat()
-    
-    otp_stats["today_success"] = 0
-    otp_stats["last_reset"] = datetime.now().isoformat()
-    
-    save_stats(stats)
-    save_otp_stats(otp_stats)
-    save_tracking(tracking)
-    print("✅ Daily stats reset (BD Time 4PM) - Today's tracking cleared")
-
-
 # Enhanced keep-alive system for Render
 async def keep_alive_enhanced():
     """Enhanced keep-alive with multiple strategies for Render"""
@@ -1041,54 +980,29 @@ async def track_status_optimized(context: CallbackContext):
         
         # ✅ IMPORTANT: Check if status changed from non-1 to 1 (Success)
         if status_code == 1 and last_status_code != 1:
-            # Load tracking data
-            tracking = load_tracking()
+            # This is the first time status changed to 1
+            print(f"🎉 Status changed to SUCCESS for {phone}")
+            
+            # Update OTP stats
+            otp_stats = load_otp_stats()
+            otp_stats["total_success"] += 1
+            otp_stats["today_success"] += 1
+            
+            # Update user stats
             user_id_str = str(user_id)
-            
-            # Check if this number already had success TODAY
-            if "today_success_numbers" not in tracking:
-                tracking["today_success_numbers"] = {}
-            
-            if phone not in tracking["today_success_numbers"]:
-                # First time success for this number TODAY
-                print(f"🎉 First time SUCCESS TODAY for {phone}")
-                
-                # Update OTP stats
-                otp_stats = load_otp_stats()
-                otp_stats["total_success"] += 1
-                otp_stats["today_success"] += 1
-                
-                # Update user stats
-                if user_id_str not in otp_stats["user_stats"]:
-                    otp_stats["user_stats"][user_id_str] = {
-                        "total_success": 0,
-                        "today_success": 0,
-                        "yesterday_success": 0,
-                        "username": username,
-                        "full_name": ""
-                    }
-                otp_stats["user_stats"][user_id_str]["total_success"] += 1
-                otp_stats["user_stats"][user_id_str]["today_success"] += 1
-                
-                # Update tracking for TODAY
-                tracking["today_success_numbers"][phone] = {
-                    "user_id": user_id_str,
-                    "success_at": datetime.now().isoformat()
+            if user_id_str not in otp_stats["user_stats"]:
+                otp_stats["user_stats"][user_id_str] = {
+                    "total_success": 0,
+                    "today_success": 0,
+                    "yesterday_success": 0,
+                    "username": username,
+                    "full_name": ""
                 }
-                
-                # Update today's success count for user
-                if "today_success" not in tracking:
-                    tracking["today_success"] = {}
-                
-                if user_id_str not in tracking["today_success"]:
-                    tracking["today_success"][user_id_str] = 0
-                tracking["today_success"][user_id_str] += 1
-                
-                save_otp_stats(otp_stats)
-                save_tracking(tracking)
-                print(f"✅ Success count TODAY for user {user_id_str} - Number: {phone}")
-            else:
-                print(f"ℹ️ Number {phone} already had success TODAY, not counting again")
+            otp_stats["user_stats"][user_id_str]["total_success"] += 1
+            otp_stats["user_stats"][user_id_str]["today_success"] += 1
+            
+            save_otp_stats(otp_stats)
+            print(f"✅ Success count updated for user {user_id_str}")
         
         if status_name != last_status:
             new_text = f"{prefix}{phone} {status_name}"
@@ -2489,33 +2403,25 @@ async def show_stats(update: Update, context: CallbackContext) -> None:
     
     stats = load_stats()
     otp_stats = load_otp_stats()
-    tracking = load_tracking()
     
     remaining = account_manager.get_user_remaining_checks(user_id)
     active_accounts_count = account_manager.get_user_active_accounts_count(user_id)
     total_slots = active_accounts_count * MAX_PER_ACCOUNT
     used_slots = total_slots - remaining if total_slots > 0 else 0
     
-    # Get user-specific stats from tracking
+    # Get user-specific stats
     user_id_str = str(user_id)
-    user_today_added = tracking.get("today_added", {}).get(user_id_str, 0)
-    user_yesterday_added = tracking.get("yesterday_added", {}).get(user_id_str, 0)
-    user_today_otp = tracking.get("today_success", {}).get(user_id_str, 0)
-    user_yesterday_otp = tracking.get("yesterday_success", {}).get(user_id_str, 0)
+    user_otp_info = otp_stats.get('user_stats', {}).get(user_id_str, {})
+    
+    user_today_otp = user_otp_info.get('today_success', 0)
+    user_yesterday_otp = user_otp_info.get('yesterday_success', 0)
     
     if user_id == ADMIN_ID:
-        # Admin sees global stats
         message = f"📊 Statistics Dashboard 👑\n\n"
         
         # Get settlement rate
         settings = load_settings()
         rate = settings.get('settlement_rate', 0.10)
-        
-        # Calculate admin's personal stats
-        admin_today_added = tracking.get("today_added", {}).get(str(ADMIN_ID), 0)
-        admin_yesterday_added = tracking.get("yesterday_added", {}).get(str(ADMIN_ID), 0)
-        admin_today_otp = tracking.get("today_success", {}).get(str(ADMIN_ID), 0)
-        admin_yesterday_otp = tracking.get("yesterday_success", {}).get(str(ADMIN_ID), 0)
         
         message += f"💰 Settlement Rate: ${rate:.2f}\n"
         message += f"📱 Your Account Status:\n"
@@ -2523,15 +2429,13 @@ async def show_stats(update: Update, context: CallbackContext) -> None:
         message += f"• Checks Used: {used_slots}/{total_slots}\n"
         message += f"• Remaining: {remaining}\n\n"
         
-        message += f"📈 Your Added Numbers:\n"
-        message += f"• Today: {admin_today_added}\n"
-        message += f"• Yesterday: {admin_yesterday_added}\n\n"
+        message += f"📈 Today's Added: {stats.get('today_checked', 0)}\n"
+        message += f"📈 Yesterday's Added: {stats.get('yesterday_checked', 0)}\n\n"
         
-        message += f"✅ Your OTP Success:\n"
-        message += f"• Today: {admin_today_otp}\n"
-        message += f"• Yesterday: {admin_yesterday_otp}"
+        message += f"✅ OTP Success:\n"
+        message += f"• Today: {otp_stats.get('today_success', 0)}\n"
+        message += f"• Yesterday: {otp_stats.get('yesterday_success', 0)}"
     else:
-        # Regular user sees their own stats
         message = (
             f"📊 Statistics Dashboard\n\n"
             f"👤 Name: {user_name}\n\n"
@@ -2539,9 +2443,8 @@ async def show_stats(update: Update, context: CallbackContext) -> None:
             f"• Active Login: {active_accounts_count}\n"
             f"• Processing: {used_slots}/{total_slots}\n"
             f"• Remaining: {remaining}\n\n"
-            f"📈 Added Today: {user_today_added}\n"
-            f"✅️ Succeeded Today: {user_today_otp}\n\n"
-            f"⏰ Last Updated: {datetime.now().strftime('%d %b %Y, %H:%M')}"
+            f"📈 Added Today: {stats.get('today_checked', 0)}\n"
+            f"✅️ Succeeded Today: {user_today_otp}\n"
         )
     
     await update.message.reply_text(message)
@@ -2565,8 +2468,8 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
     processing_msg = await update.message.reply_text("🔄 Loading user statistics...")
     
     accounts = load_accounts()
+    stats = load_stats()
     otp_stats = load_otp_stats()
-    tracking = load_tracking()
     
     # Remove admin from accounts
     user_accounts = {k: v for k, v in accounts.items() if k != str(ADMIN_ID)}
@@ -2575,14 +2478,15 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
         await processing_msg.edit_text("❌ No user stats available!")
         return
     
-    # Calculate totals from tracking
-    total_today_added = sum(tracking.get("today_added", {}).values())
-    total_yesterday_added = sum(tracking.get("yesterday_added", {}).values())
-    total_today_otp = sum(tracking.get("today_success", {}).values())
-    total_yesterday_otp = sum(tracking.get("yesterday_success", {}).values())
+    # Calculate totals
+    total_users = len(user_accounts)
+    total_today_added = stats.get('today_checked', 0)
+    total_yesterday_added = stats.get('yesterday_checked', 0)
+    total_today_otp = otp_stats.get('today_success', 0)
+    total_yesterday_otp = otp_stats.get('yesterday_success', 0)
     
     # Pagination
-    users_per_page = 20
+    users_per_page = 25
     all_user_ids = list(user_accounts.keys())
     
     total_pages = (len(all_user_ids) + users_per_page - 1) // users_per_page
@@ -2595,7 +2499,7 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
     message = "📊 User Statistics Dashboard 👑\n"
     message += f"📄 Page: {page}/{total_pages}\n\n"
     
-    message += f"👥 Total Users: {len(user_accounts)}\n"
+    message += f"👥 Total Users: {total_users}\n"
     message += f"📊 Total Added (Today): {total_today_added}\n"
     message += f"📊 Total Added (Yesterday): {total_yesterday_added}\n"
     message += f"✅ Total OTP Success (Today): {total_today_otp}\n"
@@ -2612,14 +2516,10 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
         # Get username from first account
         username = user_info[0].get('username', 'Unknown') if user_info else 'Unknown'
         
-        # Get user stats from tracking
-        user_today_added = tracking.get("today_added", {}).get(user_id_str, 0)
-        user_yesterday_added = tracking.get("yesterday_added", {}).get(user_id_str, 0)
-        user_today_otp = tracking.get("today_success", {}).get(user_id_str, 0)
-        user_yesterday_otp = tracking.get("yesterday_success", {}).get(user_id_str, 0)
-        
-        # Get user OTP info for full name
+        # Get user OTP stats
         user_otp_info = otp_stats.get('user_stats', {}).get(user_id_str, {})
+        user_today_otp = user_otp_info.get('today_success', 0)
+        user_yesterday_otp = user_otp_info.get('yesterday_success', 0)
         user_full_name = user_otp_info.get('full_name', '')
         
         # Calculate remaining checks
@@ -2633,7 +2533,7 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
         message += f"👤 User: {display_name}\n"
         message += f"🆔 ID: {user_id_str}\n"
         message += f"📱 Accounts: {len(user_info)} | 🔓 Logged: {logged_in}\n"
-        message += f"📈 Today Added: {user_today_added} | Yesterday: {user_yesterday_added}\n"
+        message += f"📈 Today Added: {stats.get('today_checked', 0)} | Yesterday: {stats.get('yesterday_checked', 0)}\n"
         message += f"✅ OTP Today: {user_today_otp} | Yesterday: {user_yesterday_otp}\n"
         message += f"────────────────────\n\n"
     
@@ -2770,55 +2670,13 @@ async def refresh_server(update: Update, context: CallbackContext) -> None:
         f"• Failed: {total_accounts - active_accounts}"
     )
 
-# Async number adding with serial number - UPDATED FOR DUPLICATE CHECK
+# Async number adding with serial number
 async def async_add_number_optimized(token, phone, msg, username, serial_number=None, user_id=None):
     try:
         async with aiohttp.ClientSession() as session:
-            # ✅ Check if this number was already added TODAY
-            tracking = load_tracking()
-            user_id_str = str(user_id)
-            
-            # Check in today's added numbers
-            if phone in tracking.get("today_added_numbers", {}):
-                # This number was already added today
-                prefix = f"{serial_number}. " if serial_number else ""
-                await msg.edit_text(f"{prefix}{phone} ⚠️ Already Added Today")
-                account_manager.release_token(token)
-                return
-            
-            # Try to add the number
             added = await add_number_async(session, token, 11, phone)
             prefix = f"{serial_number}. " if serial_number else ""
-            
             if added:
-                # ✅ Number added successfully - track it for TODAY
-                stats = load_stats()
-                
-                # Add to today's tracking
-                if "today_added_numbers" not in tracking:
-                    tracking["today_added_numbers"] = {}
-                
-                tracking["today_added_numbers"][phone] = {
-                    "user_id": user_id_str,
-                    "added_at": datetime.now().isoformat()
-                }
-                
-                # Update stats
-                stats["total_checked"] += 1
-                stats["today_checked"] += 1
-                
-                # Update user's today added count
-                if "today_added" not in tracking:
-                    tracking["today_added"] = {}
-                
-                if user_id_str not in tracking["today_added"]:
-                    tracking["today_added"][user_id_str] = 0
-                tracking["today_added"][user_id_str] += 1
-                
-                save_stats(stats)
-                save_tracking(tracking)
-                print(f"✅ Added TODAY for user {user_id_str} - Number: {phone}")
-                
                 await msg.edit_text(f"{prefix}{phone} 🔵 In Progress")
             else:
                 status_code, status_name, record_id = await get_status_async(session, token, phone)
