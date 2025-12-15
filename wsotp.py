@@ -1888,37 +1888,540 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             else:
                 summary_message += f"📭 **No settlements found for {target_date_display}**\n"
             summary_message += f"ℹ️ **Rate Updated:** ${new_rate:.2f} (for future settlements)"
+async def set_settlement_rate(update: Update, context: CallbackContext):
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
         
-        # Add timestamp
-        summary_message += f"\n\n⏰ **Completed at:** {datetime.now().strftime('%H:%M:%S')}"
+    if not context.args:
+        await update.message.reply_text(
+            "✨ **Set Settlement Rate** ✨\n\n"
+            "📝 **Usage:** `/setrate amount [date] [country...]`\n"
+            "📢 **Notice:** `/setrate notice Your message here`\n\n"
+            "📌 **Examples:**\n"
+            "• `/setrate 0.08` (Today, all countries)\n"
+            "• `/setrate 0.08 2/12` (2nd Dec, all countries)\n"
+            "• `/setrate 0.08 Canada` (Today, Canada only)\n"
+            "• `/setrate 0.08 Canada Nigeria` (Today, Canada & Nigeria)\n"
+            "• `/setrate 0.08 2/12 Canada` (2nd Dec, Canada only)\n"
+            "• `/setrate notice Payment will be sent tomorrow` (Send notice)\n\n"
+            "💡 **Note:** Date format: DD/MM or YYYY-MM-DD"
+        )
+        return
         
-        await processing_msg.edit_text(summary_message, parse_mode='Markdown')
+    try:
+        # Check if this is a notice command
+        if context.args[0].lower() == 'notice':
+            notice_message = ' '.join(context.args[1:])
+            if not notice_message:
+                await update.message.reply_text("❌ Please provide a notice message!")
+                return
+            
+            accounts = load_accounts()
+            sent_count = 0
+            
+            processing_msg = await update.message.reply_text(f"📢 Sending notice to all users...")
+            
+            for user_id_str in accounts.keys():
+                if user_id_str == str(ADMIN_ID):
+                    continue
+                
+                try:
+                    await context.bot.send_message(
+                        int(user_id_str),
+                        f"📢 **Admin Notice** 📢\n\n"
+                        f"{notice_message}\n\n"
+                        f"📅 Date: {datetime.now().strftime('%d %B %Y')}"
+                    )
+                    sent_count += 1
+                    await asyncio.sleep(0.5)
+                except Exception as e:
+                    print(f"❌ Could not send notice to user {user_id_str}: {e}")
+            
+            await processing_msg.edit_text(
+                f"✅ **Notice Sent Successfully!**\n\n"
+                f"📢 **Message:** {notice_message}\n"
+                f"👥 **Sent to:** {sent_count} users\n"
+                f"⏰ **Time:** {datetime.now().strftime('%H:%M:%S')}"
+            )
+            return
         
-        # Send detailed payment summary
+        # Parse rate (first argument)
+        new_rate = float(context.args[0])
+        if new_rate <= 0:
+            await update.message.reply_text("❌ Rate must be greater than 0!")
+            return
+        
+        # Initialize variables
+        target_date = datetime.now().date()
+        date_provided = False
+        countries = []
+        
+        # Parse remaining arguments
+        remaining_args = context.args[1:]
+        
+        # Check for date in arguments
+        if remaining_args:
+            # Try to parse first argument as date
+            first_arg = remaining_args[0]
+            date_str = None
+            
+            # Check if first argument looks like a date
+            if '/' in first_arg or '-' in first_arg:
+                date_str = first_arg
+                remaining_args = remaining_args[1:]  # Remove date from list
+            
+            if date_str:
+                date_provided = True
+                try:
+                    if '/' in date_str:
+                        # Format: 2/12 or 02/12
+                        parts = date_str.split('/')
+                        if len(parts) == 2:
+                            day, month = parts
+                            if len(day) == 1:
+                                day = '0' + day
+                            if len(month) == 1:
+                                month = '0' + month
+                            current_year = datetime.now().year
+                            target_date = datetime.strptime(f"{day}/{month}/{current_year}", "%d/%m/%Y").date()
+                        else:
+                            await update.message.reply_text("❌ Invalid date format! Use: 2/12 or 02/12")
+                            return
+                    elif '-' in date_str:
+                        # Format: 2023-12-02 or 12-02
+                        if len(date_str) == 5:  # 12-02 format
+                            month, day = date_str.split('-')
+                            current_year = datetime.now().year
+                            target_date = datetime.strptime(f"{current_year}-{month}-{day}", "%Y-%m-%d").date()
+                        else:
+                            target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                except Exception as e:
+                    await update.message.reply_text(
+                        f"❌ Date parsing error: {e}\n"
+                        "Use format: 2/12 or 2023-12-02"
+                    )
+                    return
+        
+        # Remaining arguments are countries
+        countries = [country.title() for country in remaining_args]
+        
+        settings = load_settings()
+        old_rate = settings.get('settlement_rate', 0.10)
+        
+        target_date_str = target_date.strftime('%Y-%m-%d')
+        target_date_display = target_date.strftime('%d %B %Y')
+        
+        # Prepare filter message
+        filter_message = ""
+        if countries:
+            if len(countries) == 1:
+                filter_message = f"🌍 **Country Filter:** {countries[0]} only"
+            else:
+                filter_message = f"🌍 **Countries:** {', '.join(countries)}"
+        else:
+            filter_message = "🌍 **All Countries**"
+        
+        # Beautiful processing message
+        processing_msg = await update.message.reply_text(
+            f"🔄 **Processing Settlement Rate Update**\n\n"
+            f"📅 **Date:** {target_date_display}\n"
+            f"💰 **New Rate:** ${new_rate:.2f}\n"
+            f"{filter_message}\n"
+            f"⏳ **Status:** Initializing users..."
+        )
+        
+        accounts = load_accounts()
+        all_users_summary = []
+        total_users = 0
+        total_usd = 0
+        total_bdt = 0
+        USD_TO_BDT = 125
+        
+        # Counters
+        users_processed = 0
+        users_token_refreshed = 0
+        users_with_settlements = 0
+        users_failed = 0
+        
+        for user_id_str, user_accounts in accounts.items():
+            if user_id_str == str(ADMIN_ID):
+                continue
+            
+            if not user_accounts:
+                continue
+            
+            users_processed += 1
+            username = user_accounts[0].get('username', 'Unknown')
+            
+            # Update progress every 5 users
+            if users_processed % 5 == 0:
+                try:
+                    await processing_msg.edit_text(
+                        f"🔄 **Processing Settlement Rate Update**\n\n"
+                        f"📅 **Date:** {target_date_display}\n"
+                        f"💰 **New Rate:** ${new_rate:.2f}\n"
+                        f"{filter_message}\n"
+                        f"⏳ **Status:** Processing {users_processed} users...\n"
+                        f"✅ **Found:** {users_with_settlements} users with settlements"
+                    )
+                except:
+                    pass
+            
+            # STEP 1: Get or refresh user token
+            user_token = None
+            token_refreshed = False
+            
+            if user_id_str in account_manager.user_tokens and account_manager.user_tokens[user_id_str]:
+                user_token = account_manager.user_tokens[user_id_str][0]
+                
+                # Validate token
+                async with aiohttp.ClientSession() as session:
+                    status_code, _, _ = await get_status_async(session, user_token, "0000000000")
+                
+                if status_code == -1:
+                    user_token = None
+            
+            # If no valid token, try to login
+            if not user_token:
+                for acc in user_accounts:
+                    if not acc.get('active', True):
+                        continue
+                    
+                    token, api_user_id, nickname = await login_api_async(acc['username'], acc['password'])
+                    if token:
+                        acc['token'] = token
+                        acc['api_user_id'] = api_user_id
+                        acc['nickname'] = nickname
+                        acc['last_login'] = datetime.now().isoformat()
+                        
+                        user_token = token
+                        token_refreshed = True
+                        users_token_refreshed += 1
+                        break
+            
+            if not user_token:
+                users_failed += 1
+                continue
+            
+            # Save updated accounts
+            save_accounts(accounts)
+            
+            # Get API user ID
+            api_user_id = None
+            for acc in user_accounts:
+                if acc.get('token') == user_token:
+                    api_user_id = acc.get('api_user_id')
+                    break
+            
+            if not api_user_id:
+                users_failed += 1
+                continue
+            
+            # STEP 2: Fetch settlements with country filter
+            try:
+                async with aiohttp.ClientSession() as session:
+                    settlement_data, error = await get_user_settlements(session, user_token, str(api_user_id), page=1, page_size=100)
+                
+                if error or not settlement_data or not settlement_data.get('records'):
+                    continue
+                
+                # Filter settlements
+                filtered_settlements = []
+                for record in settlement_data.get('records', []):
+                    gmt_create = record.get('gmtCreate')
+                    if not gmt_create:
+                        continue
+                    
+                    try:
+                        # Parse date
+                        if 'T' in gmt_create:
+                            record_date = datetime.fromisoformat(gmt_create.replace('Z', '+00:00')).date()
+                        else:
+                            record_date = datetime.strptime(gmt_create, '%Y-%m-%d %H:%M:%S').date()
+                        
+                        # Check date
+                        if record_date != target_date:
+                            continue
+                        
+                        # Get country
+                        country = record.get('countryName') or record.get('country') or 'Unknown'
+                        
+                        # Check country filter
+                        if countries and country not in countries:
+                            continue
+                        
+                        filtered_settlements.append({
+                            'record': record,
+                            'date': record_date,
+                            'country': country,
+                            'count': record.get('count', 0)
+                        })
+                        
+                    except Exception as e:
+                        continue
+                
+                if not filtered_settlements:
+                    continue
+                
+                users_with_settlements += 1
+                
+                # Group by country
+                country_totals = {}
+                for item in filtered_settlements:
+                    country = item['country']
+                    if country not in country_totals:
+                        country_totals[country] = 0
+                    country_totals[country] += item['count']
+                
+                # Calculate totals
+                total_count = sum(country_totals.values())
+                total_usd_user = total_count * new_rate
+                total_bdt_user = total_usd_user * USD_TO_BDT
+                
+                user_summary = {
+                    'user_id': user_id_str,
+                    'username': username,
+                    'api_user_id': api_user_id,
+                    'settlement_date': target_date_display,
+                    'countries': list(country_totals.keys()),
+                    'country_totals': country_totals,
+                    'total_count': total_count,
+                    'total_usd': total_usd_user,
+                    'total_bdt': total_bdt_user,
+                    'num_records': len(filtered_settlements),
+                    'token_refreshed': token_refreshed
+                }
+                
+                all_users_summary.append(user_summary)
+                total_users += 1
+                total_usd += total_usd_user
+                total_bdt += total_bdt_user
+                
+            except Exception as e:
+                users_failed += 1
+                continue
+        
+        # Save new rate
+        settings['settlement_rate'] = new_rate
+        settings['last_updated'] = datetime.now().isoformat()
+        settings['updated_by'] = ADMIN_ID
+        save_settings(settings)
+        
+        # STEP 3: Send notifications to users
+        notified_users = 0
+        for user_summary in all_users_summary:
+            try:
+                # Prepare message
+                message = "✨ **Settlement Rate Update** ✨\n\n"
+                message += "📢 **Notification for Your Account**\n\n"
+                
+                message += "📋 **Details:**\n"
+                message += f"• 📅 **Date:** {user_summary['settlement_date']}\n"
+                
+                if len(user_summary['countries']) == 1:
+                    message += f"• 🌍 **Country:** {user_summary['countries'][0]}\n"
+                else:
+                    message += f"• 🌍 **Countries:** {', '.join(user_summary['countries'])}\n"
+                
+                # Show country-wise breakdown if multiple countries
+                if len(user_summary['country_totals']) > 1:
+                    message += "\n📊 **Country Breakdown:**\n"
+                    for country, count in user_summary['country_totals'].items():
+                        country_usd = count * new_rate
+                        message += f"• {country}: {count} counts = ${country_usd:.2f}\n"
+                
+                message += f"• 🔢 **Total Count:** {user_summary['total_count']}\n\n"
+                
+                message += "💰 **Payment Calculation:**\n"
+                message += f"• 📈 **New Rate:** ${new_rate:.2f}\n"
+                message += f"• 💵 **Total USD:** ${user_summary['total_usd']:.2f}\n"
+                message += f"• 🇧🇩 **Total BDT:** {user_summary['total_bdt']:.2f} BDT\n\n"
+                
+                if user_summary['token_refreshed']:
+                    message += "🔄 **Note:** Your account was auto-refreshed\n\n"
+                
+                message += "💳 **Payment Information:**\n"
+                message += "Please contact the admin to receive your payment.\n\n"
+                message += "📞 **Contact Admin for Payment Collection**"
+                
+                await context.bot.send_message(
+                    int(user_summary['user_id']),
+                    message,
+                    parse_mode='Markdown'
+                )
+                notified_users += 1
+                await asyncio.sleep(1)
+            except Exception as e:
+                print(f"❌ Notification failed: {e}")
+        
+        # STEP 4: Send admin summary in multiple messages
         if all_users_summary:
-            log_message = "📋 **Detailed Payment Summary** 📋\n\n"
-            log_message += f"📅 **Date:** {target_date_display}\n"
-            log_message += f"💰 **Rate:** ${new_rate:.2f}\n"
+            # First, send the main summary
+            summary_message = "🎯 **Settlement Rate Update Complete** 🎯\n\n"
+            
+            summary_message += "📊 **Operation Summary:**\n"
+            summary_message += f"• 📅 **Target Date:** {target_date_display}\n"
+            summary_message += f"• 🔄 **Previous Rate:** ${old_rate:.2f}\n"
+            summary_message += f"• ✅ **New Rate:** ${new_rate:.2f}\n"
+            summary_message += f"• 💱 **Exchange Rate:** 1 USD = {USD_TO_BDT} BDT\n"
+            summary_message += f"• {filter_message}\n\n"
+            
+            summary_message += "📈 **Processing Statistics:**\n"
+            summary_message += f"• 👥 **Total Users:** {users_processed}\n"
+            summary_message += f"• 🔄 **Auto-Refreshed:** {users_token_refreshed}\n"
+            summary_message += f"• ✅ **With Settlements:** {users_with_settlements}\n"
+            summary_message += f"• ❌ **Failed:** {users_failed}\n"
+            summary_message += f"• 📨 **Notifications Sent:** {notified_users}\n\n"
+            
+            summary_message += "💰 **Financial Summary:**\n"
+            summary_message += f"• 👥 **Total Users:** {total_users}\n"
+            summary_message += f"• 💵 **Total USD:** ${total_usd:.2f}\n"
+            summary_message += f"• 🇧🇩 **Total BDT:** {total_bdt:.2f} BDT\n"
+            summary_message += f"• 📊 **Total Records:** {sum(u['num_records'] for u in all_users_summary)}\n\n"
+            
+            summary_message += "✅ **Operation Successful!**\n"
+            summary_message += f"All notifications have been sent to {notified_users} users."
+            summary_message += f"\n\n⏰ **Completed at:** {datetime.now().strftime('%H:%M:%S')}"
+            
+            await processing_msg.edit_text(summary_message, parse_mode='Markdown')
+            
+            # Now send user details in chunks of 10 users per message
+            users_per_message = 10
+            total_chunks = (len(all_users_summary) + users_per_message - 1) // users_per_message
+            
+            for chunk_index in range(total_chunks):
+                start_idx = chunk_index * users_per_message
+                end_idx = min(start_idx + users_per_message, len(all_users_summary))
+                chunk = all_users_summary[start_idx:end_idx]
+                
+                details_message = f"📋 **User Details - Part {chunk_index + 1}/{total_chunks}** 📋\n\n"
+                details_message += f"📅 **Date:** {target_date_display}\n"
+                details_message += f"💰 **Rate:** ${new_rate:.2f}\n\n"
+                
+                for i, user_summary in enumerate(chunk, start=start_idx + 1):
+                    refresh_icon = " 🔄" if user_summary['token_refreshed'] else ""
+                    details_message += f"**{i}. {user_summary['username']}**{refresh_icon}\n"
+                    details_message += f"   ├─ 👤 **ID:** {user_summary['api_user_id']}\n"
+                    
+                    if len(user_summary['countries']) == 1:
+                        details_message += f"   ├─ 🌍 **Country:** {user_summary['countries'][0]}\n"
+                    else:
+                        details_message += f"   ├─ 🌍 **Countries:** {', '.join(user_summary['countries'])}\n"
+                    
+                    # Show country breakdown for multiple countries
+                    if len(user_summary['country_totals']) > 1:
+                        for country, count in user_summary['country_totals'].items():
+                            details_message += f"   ├─ • {country}: {count}\n"
+                    
+                    details_message += f"   ├─ 🔢 **Count:** {user_summary['total_count']}\n"
+                    details_message += f"   ├─ 💵 **USD:** ${user_summary['total_usd']:.2f}\n"
+                    details_message += f"   └─ 🇧🇩 **BDT:** {user_summary['total_bdt']:.2f}\n\n"
+                
+                # Add chunk summary
+                chunk_usd = sum(u['total_usd'] for u in chunk)
+                chunk_bdt = sum(u['total_bdt'] for u in chunk)
+                details_message += f"📊 **Chunk {chunk_index + 1} Total:**\n"
+                details_message += f"• 👥 Users: {len(chunk)}\n"
+                details_message += f"• 💵 USD: ${chunk_usd:.2f}\n"
+                details_message += f"• 🇧🇩 BDT: {chunk_bdt:.2f}\n\n"
+                
+                if chunk_index < total_chunks - 1:
+                    details_message += "⬇️ **More details in next message...**"
+                
+                try:
+                    await context.bot.send_message(
+                        ADMIN_ID,
+                        details_message,
+                        parse_mode='Markdown'
+                    )
+                    await asyncio.sleep(1)
+                except Exception as e:
+                    print(f"❌ Error sending chunk {chunk_index + 1}: {e}")
+            
+            # Send final detailed payment summary
+            if countries and len(countries) > 0:
+                # Calculate total by country
+                country_summary = {}
+                for user_summary in all_users_summary:
+                    for country, count in user_summary['country_totals'].items():
+                        if country not in country_summary:
+                            country_summary[country] = 0
+                        country_summary[country] += count
+                
+                if country_summary:
+                    country_message = "🌍 **Country-Wise Summary** 🌍\n\n"
+                    country_message += f"📅 **Date:** {target_date_display}\n"
+                    country_message += f"💰 **Rate:** ${new_rate:.2f}\n\n"
+                    
+                    for country, count in country_summary.items():
+                        country_usd = count * new_rate
+                        country_bdt = country_usd * USD_TO_BDT
+                        country_message += f"**{country}:**\n"
+                        country_message += f"• 🔢 **Count:** {count}\n"
+                        country_message += f"• 💵 **USD:** ${country_usd:.2f}\n"
+                        country_message += f"• 🇧🇩 **BDT:** {country_bdt:.2f}\n\n"
+                    
+                    try:
+                        await context.bot.send_message(
+                            ADMIN_ID,
+                            country_message,
+                            parse_mode='Markdown'
+                        )
+                    except:
+                        pass
+            
+            # Send overall payment summary
+            payment_message = "💰 **Final Payment Summary** 💰\n\n"
+            payment_message += f"📅 **Date:** {target_date_display}\n"
+            payment_message += f"💰 **Rate:** ${new_rate:.2f}\n"
             
             if countries:
-                log_message += f"🌍 **Countries:** {', '.join(countries)}\n"
+                payment_message += f"🌍 **Countries:** {', '.join(countries)}\n"
             
-            log_message += f"💱 **1 USD =** {USD_TO_BDT} BDT\n\n"
+            payment_message += f"💱 **1 USD =** {USD_TO_BDT} BDT\n\n"
             
-            log_message += "👥 **User Payment Breakdown:**\n"
-            for user_summary in all_users_summary:
-                log_message += f"• **{user_summary['username']}:** {user_summary['total_count']} counts = {user_summary['total_bdt']:.2f} BDT\n"
+            payment_message += "📊 **Final Totals:**\n"
+            payment_message += f"• 👥 **Total Users:** {total_users}\n"
+            payment_message += f"• 💵 **Total USD:** ${total_usd:.2f}\n"
+            payment_message += f"• 🇧🇩 **Total BDT:** {total_bdt:.2f}\n\n"
             
-            log_message += f"\n💰 **Total Payment Due:** {total_bdt:.2f} BDT"
+            payment_message += "💳 **Payment Distribution Complete**\n"
+            payment_message += "✅ All users have been notified."
             
             try:
                 await context.bot.send_message(
                     ADMIN_ID,
-                    log_message,
+                    payment_message,
                     parse_mode='Markdown'
                 )
             except:
                 pass
+            
+        else:
+            # No settlements found
+            summary_message = "🎯 **Settlement Rate Update Complete** 🎯\n\n"
+            
+            summary_message += "📊 **Operation Summary:**\n"
+            summary_message += f"• 📅 **Target Date:** {target_date_display}\n"
+            summary_message += f"• 🔄 **Previous Rate:** ${old_rate:.2f}\n"
+            summary_message += f"• ✅ **New Rate:** ${new_rate:.2f}\n"
+            summary_message += f"• {filter_message}\n\n"
+            
+            summary_message += "📈 **Processing Statistics:**\n"
+            summary_message += f"• 👥 **Total Users:** {users_processed}\n"
+            summary_message += f"• 🔄 **Auto-Refreshed:** {users_token_refreshed}\n"
+            summary_message += f"• ❌ **Failed:** {users_failed}\n\n"
+            
+            if countries:
+                summary_message += f"📭 **No settlements found for {target_date_display} in {', '.join(countries)}**\n"
+            else:
+                summary_message += f"📭 **No settlements found for {target_date_display}**\n"
+            
+            summary_message += f"ℹ️ **Rate Updated:** ${new_rate:.2f} (for future settlements)\n\n"
+            summary_message += f"⏰ **Completed at:** {datetime.now().strftime('%H:%M:%S')}"
+            
+            await processing_msg.edit_text(summary_message, parse_mode='Markdown')
         
     except ValueError:
         await update.message.reply_text(
