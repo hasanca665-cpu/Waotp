@@ -2569,7 +2569,7 @@ async def show_stats(update: Update, context: CallbackContext) -> None:
         message += f"💰 Settlement Rate: ${rate:.2f}\n"
         message += f"📱 Your Account Status:\n"
         message += f"• Active Login: {active_accounts_count}\n"
-        message += f"• Checks Used: {used_slots}/{total_slots}\n"
+        message += f"• Processing: {used_slots}/{total_slots}\n"
         message += f"• Remaining: {remaining}\n\n"
         
         message += f"📈 Today's Added: {user_today_added}\n"
@@ -2636,7 +2636,7 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
         total_yesterday_otp = sum(tracking["daily_stats"][yesterday_date].values())
     
     # Pagination
-    users_per_page = 25
+    users_per_page = 35
     all_user_ids = list(user_accounts.keys())
     
     total_pages = (len(all_user_ids) + users_per_page - 1) // users_per_page
@@ -2694,9 +2694,10 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
         display_name = user_full_name if user_full_name else username
         message += f"👤 User: {display_name}\n"
         message += f"🆔 ID: {user_id_str}\n"
-        message += f"📱 Accounts: {len(user_info)} | 🔓 Logged: {logged_in}\n"
-        message += f"📈 Today Added: {user_today_added} | Yesterday: {user_yesterday_added}\n"
-        message += f"✅ OTP Today: {user_today_otp} | Yesterday: {user_yesterday_otp}\n"
+        message += f"🔓 Logged: {logged_in}\n"
+        message += f"📈 Added: {user_today_added}\n"
+        message += f"✅ Success: {user_today_otp}\n"
+        message += f"✅️ Yesterday: {user_yesterday_otp}\n"
         message += f"────────────────────\n\n"
     
     # Add pagination buttons if needed
