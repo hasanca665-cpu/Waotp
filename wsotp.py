@@ -2569,7 +2569,7 @@ async def show_stats(update: Update, context: CallbackContext) -> None:
         message += f"💰 Settlement Rate: ${rate:.2f}\n"
         message += f"📱 Your Account Status:\n"
         message += f"• Active Login: {active_accounts_count}\n"
-        message += f"• Processing: {used_slots}/{total_slots}\n"
+        message += f"• Checks Used: {used_slots}/{total_slots}\n"
         message += f"• Remaining: {remaining}\n\n"
         
         message += f"📈 Today's Added: {user_today_added}\n"
@@ -2584,18 +2584,16 @@ async def show_stats(update: Update, context: CallbackContext) -> None:
             f"👤 User: {user_name}\n\n"
             f"📱 Account Status:\n"
             f"• Active Login: {active_accounts_count}\n"
-            f"• Checks Used: {used_slots}/{total_slots}\n"
+            f"• Processing: {used_slots}/{total_slots}\n"
             f"• Remaining: {remaining}\n\n"
-            f"📈 Today's Added: {user_today_added}\n"
-            f"📈 Yesterday's Added: {user_yesterday_added}\n\n"
-            f"✅ OTP Success:\n"
+            f"✅ Success:\n"
             f"• Today: {user_today_otp}\n"
             f"• Yesterday: {user_yesterday_otp}\n\n"
-            f"⏰ Last Updated: {datetime.now().strftime('%d %b %Y, %H:%M')}"
         )
     
     await update.message.reply_text(message)
 
+# FIXED ADMIN USER STATS
 async def admin_user_stats(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id != ADMIN_ID:
         await update.message.reply_text("❌ Admin only command!")
@@ -2636,14 +2634,10 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
         total_yesterday_otp = sum(tracking["daily_stats"][yesterday_date].values())
     
     # Pagination
-    users_per_page = 35
+    users_per_page = 40
     all_user_ids = list(user_accounts.keys())
     
     total_pages = (len(all_user_ids) + users_per_page - 1) // users_per_page
-    
-    # Check if page is valid
-    if page > total_pages:
-        page = total_pages
     
     # Get users for current page
     start_idx = (page - 1) * users_per_page
@@ -2654,10 +2648,8 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
     message += f"📄 Page: {page}/{total_pages}\n\n"
     
     message += f"👥 Total Users: {len(user_accounts)}\n"
-    message += f"📊 Total Added (Today): {total_today_added}\n"
-    message += f"📊 Total Added (Yesterday): {total_yesterday_added}\n"
-    message += f"✅ Total OTP Success (Today): {total_today_otp}\n"
-    message += f"✅ Total OTP Success (Yesterday): {total_yesterday_otp}\n\n"
+    message += f"📊 Total Added: {total_today_added} | {total_yesterday_added}\n"
+    message += f"✅ Total OTP Success: {total_today_otp} | {total_yesterday_otp}\n\n"
     
     for user_id_str in page_user_ids:
         if user_id_str == str(ADMIN_ID):
@@ -2696,8 +2688,7 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
         message += f"🆔 ID: {user_id_str}\n"
         message += f"🔓 Logged: {logged_in}\n"
         message += f"📈 Added: {user_today_added}\n"
-        message += f"✅ Success: {user_today_otp}\n"
-        message += f"✅️ Yesterday: {user_yesterday_otp}\n"
+        message += f"✅ OTP: {user_today_otp}\n"
         message += f"────────────────────\n\n"
     
     # Add pagination buttons if needed
@@ -2708,8 +2699,6 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
         row.append(InlineKeyboardButton("⬅️ Previous", callback_data=f"userstats_{page-1}"))
     
     if page < total_pages:
-        if not row:
-            row = []
         row.append(InlineKeyboardButton("Next ➡️", callback_data=f"userstats_{page+1}"))
     
     if row:
@@ -2719,6 +2708,7 @@ async def admin_user_stats(update: Update, context: CallbackContext) -> None:
     else:
         await processing_msg.edit_text(message)
 
+# Handle userstats pagination callbacks
 async def handle_userstats_callback(update: Update, context: CallbackContext):
     query = update.callback_query
     await query.answer()
@@ -2843,38 +2833,43 @@ async def refresh_server(update: Update, context: CallbackContext) -> None:
     )
 
 async def async_add_number_optimized(token, phone, msg, username, serial_number=None, user_id=None):
-    """Add number with proper counting - FIXED VERSION"""
     try:
         async with aiohttp.ClientSession() as session:
-            prefix = f"{serial_number}. " if serial_number else ""
-            
             # Try to add the number
             added = await add_number_async(session, token, 11, phone)
+            prefix = f"{serial_number}. " if serial_number else ""
             
             if added:
-                # ✅ Count only when number is successfully added to the system
-                # Load tracking and update user-specific added count
-                tracking = load_tracking()
-                user_id_str = str(user_id)
+                # ✅ শুধু status = 2 (processing) হলে count করবেন
+                # First, check the status
+                status_code, status_name, record_id = await get_status_async(session, token, phone)
                 
-                if user_id_str not in tracking["today_added"]:
-                    tracking["today_added"][user_id_str] = 0
+                if status_code == 2:  # Only count if status is "In Progress"
+                    # ✅ Load tracking and update user-specific added count
+                    tracking = load_tracking()
+                    user_id_str = str(user_id)
+                    
+                    if user_id_str not in tracking["today_added"]:
+                        tracking["today_added"][user_id_str] = 0
+                    
+                    tracking["today_added"][user_id_str] += 1
+                    save_tracking(tracking)
+                    
+                    # Also update global stats
+                    stats = load_stats()
+                    stats["total_checked"] += 1
+                    stats["today_checked"] += 1
+                    save_stats(stats)
+                    
+                    print(f"✅ Added count increased for user {user_id_str} - Number: {phone} (Status: {status_code})")
                 
-                tracking["today_added"][user_id_str] += 1
-                save_tracking(tracking)
-                
-                # Also update global stats
-                stats = load_stats()
-                stats["total_checked"] += 1
-                stats["today_checked"] += 1
-                save_stats(stats)
-                
-                print(f"✅ Added count increased for user {user_id_str} - Number: {phone}")
-                
-                # ✅ Simple message update (status update will be done by track_status_optimized)
-                await msg.edit_text(f"{prefix}{phone} 🔵 Processing...")
+                await msg.edit_text(f"{prefix}{phone} 🔵 In Progress")
             else:
-                # Add failed
+                status_code, status_name, record_id = await get_status_async(session, token, phone)
+                if status_code == 16:
+                    await msg.edit_text(f"{prefix}{phone} 🚫 Already Exists")
+                    account_manager.release_token(token)
+                    return
                 await msg.edit_text(f"{prefix}{phone} ❌ Add Failed")
                 account_manager.release_token(token)
     except Exception as e:
