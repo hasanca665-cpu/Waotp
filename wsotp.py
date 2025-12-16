@@ -2726,14 +2726,18 @@ async def handle_userstats_callback(update: Update, context: CallbackContext):
     data = query.data
     page = int(data.split('_')[1])
     
-    # Update the message to show loading
-    await query.edit_message_text("🔄 Loading user statistics...")
+    # সরাসরি message edit করব এবং নতুন করে /userstats command execute করব
+    await query.edit_message_text(f"🔄 Loading page {page}...")
     
-    # Set the page number in context args
-    context.args = [str(page)]
-    
-    # Now call admin_user_stats with the page number
-    await admin_user_stats(update, context)
+    # বটকে নতুন command send করতে বলব
+    try:
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=f"/userstats {page}",
+            reply_to_message_id=query.message.message_id
+        )
+    except Exception as e:
+        await query.edit_message_text(f"❌ Error: {e}")
 
 # Bot command handlers
 async def start(update: Update, context: CallbackContext) -> None:
@@ -2839,20 +2843,13 @@ async def refresh_server(update: Update, context: CallbackContext) -> None:
     )
 
 async def async_add_number_optimized(token, phone, msg, username, serial_number=None, user_id=None):
+    """Add number with proper counting - FIXED VERSION"""
     try:
         async with aiohttp.ClientSession() as session:
-            # First check if number already exists
-            status_code, status_name, record_id = await get_status_async(session, token, phone)
-            
-            if status_code == 16:  # Already exists
-                prefix = f"{serial_number}. " if serial_number else ""
-                await msg.edit_text(f"{prefix}{phone} 🚫 Already Exists")
-                account_manager.release_token(token)
-                return
+            prefix = f"{serial_number}. " if serial_number else ""
             
             # Try to add the number
             added = await add_number_async(session, token, 11, phone)
-            prefix = f"{serial_number}. " if serial_number else ""
             
             if added:
                 # ✅ Count only when number is successfully added to the system
@@ -2874,21 +2871,11 @@ async def async_add_number_optimized(token, phone, msg, username, serial_number=
                 
                 print(f"✅ Added count increased for user {user_id_str} - Number: {phone}")
                 
-                # Now check status and update message
-                status_code, status_name, record_id = await get_status_async(session, token, phone)
-                
-                if status_code == 2:  # In Progress
-                    await msg.edit_text(f"{prefix}{phone} 🔵 In Progress")
-                elif status_code is not None:
-                    await msg.edit_text(f"{prefix}{phone} {status_name}")
-                else:
-                    await msg.edit_text(f"{prefix}{phone} 🔵 Processing...")
+                # ✅ Simple message update (status update will be done by track_status_optimized)
+                await msg.edit_text(f"{prefix}{phone} 🔵 Processing...")
             else:
-                status_code, status_name, record_id = await get_status_async(session, token, phone)
-                if status_code == 16:
-                    await msg.edit_text(f"{prefix}{phone} 🚫 Already Exists")
-                else:
-                    await msg.edit_text(f"{prefix}{phone} ❌ Add Failed")
+                # Add failed
+                await msg.edit_text(f"{prefix}{phone} ❌ Add Failed")
                 account_manager.release_token(token)
     except Exception as e:
         print(f"❌ Add error for {phone}: {e}")
