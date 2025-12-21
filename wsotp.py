@@ -1478,7 +1478,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 try:
                     await context.bot.send_message(
                         int(user_id_str),
-                        f"📢 **Admin Notice** 📢\n\n"
+                        f"📢 Admin Notice 📢\n\n"
                         f"{notice_message}\n\n"
                         f"📅 Date: {datetime.now().strftime('%d %B %Y')}"
                     )
@@ -1573,11 +1573,11 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
         
         # Beautiful processing message
         processing_msg = await update.message.reply_text(
-            f"🔄 **Processing Settlement Rate Update**\n\n"
-            f"📅 **Date:** {target_date_display}\n"
-            f"💰 **New Rate:** ${new_rate:.2f}\n"
+            f"🔄 Processing Settlement Rate Update\n\n"
+            f"📅 Date: {target_date_display}\n"
+            f"💰 New Rate: ${new_rate:.2f}\n"
             f"{filter_message}\n"
-            f"⏳ **Status:** Initializing users..."
+            f"⏳ Status: Initializing users..."
         )
         
         accounts = load_accounts()
@@ -1607,12 +1607,12 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             if users_processed % 5 == 0:
                 try:
                     await processing_msg.edit_text(
-                        f"🔄 **Processing Settlement Rate Update**\n\n"
-                        f"📅 **Date:** {target_date_display}\n"
-                        f"💰 **New Rate:** ${new_rate:.2f}\n"
+                        f"🔄 Processing Settlement Rate Update\n\n"
+                        f"📅 Date: {target_date_display}\n"
+                        f"💰 New Rate: ${new_rate:.2f}\n"
                         f"{filter_message}\n"
-                        f"⏳ **Status:** Processing {users_processed} users...\n"
-                        f"✅ **Found:** {users_with_settlements} users with settlements"
+                        f"⏳ Status: Processing {users_processed} users...\n"
+                        f"✅ Found: {users_with_settlements} users with settlements"
                     )
                 except:
                     pass
@@ -1783,7 +1783,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 message += f"• 🔢 **Total Count:** {user_summary['total_count']}\n\n"
                 
                 message += "💰 **Payment Calculation:**\n"
-                message += f"• 📈 **New Rate:** ${new_rate:.2f}\n"
+                message += f"• 📈 **Rate:** ${new_rate:.2f}\n"
                 message += f"• 💵 **Total USD:** ${user_summary['total_usd']:.2f}\n"
                 message += f"• 🇧🇩 **Total BDT:** {user_summary['total_bdt']:.2f} BDT\n\n"
                 
