@@ -1570,45 +1570,23 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
         else:
             filter_message = "🌍 **All Countries**"
         
-        # Commission rate (fixed at $0.002 per count)
-        COMMISSION_RATE = 0.002
-        USD_TO_BDT = 124  # Exchange rate
-        
-        # Load friends data (if exists)
-        friends_data = {}
-        try:
-            with open("friends.json", 'r', encoding='utf-8') as f:
-                friends_data = json.load(f)
-        except:
-            friends_data = {}
-        
         # Beautiful processing message
         processing_msg = await update.message.reply_text(
             f"🔄 **Processing Settlement Rate Update**\n\n"
             f"📅 **Date:** {target_date_display}\n"
             f"💰 **New Rate:** ${new_rate:.2f}\n"
-            f"🤝 **Commission Rate:** ${COMMISSION_RATE:.3f} per count\n"
             f"{filter_message}\n"
             f"⏳ **Status:** Initializing users..."
         )
         
         accounts = load_accounts()
+        all_users_summary = []
+        total_users = 0
+        total_usd = 0
+        total_bdt = 0
+        USD_TO_BDT = 125
         
-        # Store all user data for processing
-        all_users_data = []
-        user_api_id_to_telegram_id = {}
-        
-        # First pass: Map API IDs to Telegram IDs
-        for user_id_str, user_accounts in accounts.items():
-            if user_id_str == str(ADMIN_ID):
-                continue
-                
-            for acc in user_accounts:
-                api_user_id = acc.get('api_user_id')
-                if api_user_id:
-                    user_api_id_to_telegram_id[str(api_user_id)] = user_id_str
-        
-        # Second pass: Process each user
+        # Counters
         users_processed = 0
         users_token_refreshed = 0
         users_with_settlements = 0
@@ -1631,7 +1609,6 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                         f"🔄 **Processing Settlement Rate Update**\n\n"
                         f"📅 **Date:** {target_date_display}\n"
                         f"💰 **New Rate:** ${new_rate:.2f}\n"
-                        f"🤝 **Commission Rate:** ${COMMISSION_RATE:.3f} per count\n"
                         f"{filter_message}\n"
                         f"⏳ **Status:** Processing {users_processed} users...\n"
                         f"✅ **Found:** {users_with_settlements} users with settlements"
@@ -1639,7 +1616,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 except:
                     pass
             
-            # Get or refresh user token
+            # STEP 1: Get or refresh user token
             user_token = None
             token_refreshed = False
             
@@ -1689,13 +1666,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 users_failed += 1
                 continue
             
-            # Get user's full name from OTP stats
-            otp_stats = load_otp_stats()
-            full_name = ""
-            if user_id_str in otp_stats.get('user_stats', {}):
-                full_name = otp_stats['user_stats'][user_id_str].get('full_name', '')
-            
-            # Fetch settlements with country filter
+            # STEP 2: Fetch settlements with country filter
             try:
                 async with aiohttp.ClientSession() as session:
                     settlement_data, error = await get_user_settlements(session, user_token, str(api_user_id), page=1, page_size=100)
@@ -1743,99 +1714,6 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 
                 users_with_settlements += 1
                 
-                # Calculate user's personal counts
-                personal_counts = sum(item['count'] for item in filtered_settlements)
-                personal_usd = personal_counts * new_rate
-                personal_bdt = personal_usd * USD_TO_BDT
-                
-                # Find user's friends
-                user_friends = []
-                if user_id_str in friends_data:
-                    for friend_telegram_id in friends_data[user_id_str]:
-                        # Check if friend has any counts
-                        friend_telegram_id_str = str(friend_telegram_id)
-                        if friend_telegram_id_str in accounts:
-                            friend_accounts = accounts[friend_telegram_id_str]
-                            
-                            # Get friend's API ID
-                            friend_api_id = None
-                            for friend_acc in friend_accounts:
-                                friend_api_id = friend_acc.get('api_user_id')
-                                if friend_api_id:
-                                    break
-                            
-                            if friend_api_id:
-                                # Check friend's settlements
-                                try:
-                                    # Get friend's token
-                                    friend_token = None
-                                    if friend_telegram_id_str in account_manager.user_tokens and account_manager.user_tokens[friend_telegram_id_str]:
-                                        friend_token = account_manager.user_tokens[friend_telegram_id_str][0]
-                                    
-                                    if friend_token:
-                                        async with aiohttp.ClientSession() as session:
-                                            friend_settlement_data, friend_error = await get_user_settlements(
-                                                session, friend_token, str(friend_api_id), page=1, page_size=100
-                                            )
-                                        
-                                        if not friend_error and friend_settlement_data and friend_settlement_data.get('records'):
-                                            friend_counts = 0
-                                            for friend_record in friend_settlement_data.get('records', []):
-                                                friend_gmt_create = friend_record.get('gmtCreate')
-                                                if not friend_gmt_create:
-                                                    continue
-                                                
-                                                try:
-                                                    # Parse date
-                                                    if 'T' in friend_gmt_create:
-                                                        friend_record_date = datetime.fromisoformat(friend_gmt_create.replace('Z', '+00:00')).date()
-                                                    else:
-                                                        friend_record_date = datetime.strptime(friend_gmt_create, '%Y-%m-%d %H:%M:%S').date()
-                                                    
-                                                    # Check date
-                                                    if friend_record_date != target_date:
-                                                        continue
-                                                    
-                                                    # Get country
-                                                    friend_country = friend_record.get('countryName') or friend_record.get('country') or 'Unknown'
-                                                    
-                                                    # Check country filter
-                                                    if countries and friend_country not in countries:
-                                                        continue
-                                                    
-                                                    friend_counts += friend_record.get('count', 0)
-                                                    
-                                                except Exception:
-                                                    continue
-                                            
-                                            # Only add friend if they have minimum 10 counts
-                                            if friend_counts >= 10:
-                                                # Get friend's name
-                                                friend_name = ""
-                                                if friend_telegram_id_str in otp_stats.get('user_stats', {}):
-                                                    friend_name = otp_stats['user_stats'][friend_telegram_id_str].get('full_name', '')
-                                                if not friend_name:
-                                                    friend_name = friend_accounts[0].get('username', 'Unknown')
-                                                
-                                                friend_commission = friend_counts * COMMISSION_RATE
-                                                
-                                                user_friends.append({
-                                                    'telegram_id': friend_telegram_id_str,
-                                                    'api_id': friend_api_id,
-                                                    'name': friend_name,
-                                                    'accounts': len(friend_accounts),
-                                                    'counts': friend_counts,
-                                                    'commission': friend_commission
-                                                })
-                                except Exception as e:
-                                    print(f"❌ Error checking friend {friend_telegram_id_str}: {e}")
-                                    continue
-                
-                # Calculate total commission
-                total_commission = sum(friend['commission'] for friend in user_friends)
-                total_usd_user = personal_usd + total_commission
-                total_bdt_user = total_usd_user * USD_TO_BDT
-                
                 # Group by country
                 country_totals = {}
                 for item in filtered_settlements:
@@ -1844,27 +1722,29 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                         country_totals[country] = 0
                     country_totals[country] += item['count']
                 
-                user_data = {
-                    'telegram_id': user_id_str,
-                    'api_id': api_user_id,
+                # Calculate totals
+                total_count = sum(country_totals.values())
+                total_usd_user = total_count * new_rate
+                total_bdt_user = total_usd_user * USD_TO_BDT
+                
+                user_summary = {
+                    'user_id': user_id_str,
                     'username': username,
-                    'full_name': full_name,
-                    'accounts': len(user_accounts),
+                    'api_user_id': api_user_id,
                     'settlement_date': target_date_display,
                     'countries': list(country_totals.keys()),
                     'country_totals': country_totals,
-                    'personal_counts': personal_counts,
-                    'personal_usd': personal_usd,
-                    'personal_bdt': personal_bdt,
-                    'friends': user_friends,
-                    'total_commission': total_commission,
+                    'total_count': total_count,
                     'total_usd': total_usd_user,
                     'total_bdt': total_bdt_user,
                     'num_records': len(filtered_settlements),
                     'token_refreshed': token_refreshed
                 }
                 
-                all_users_data.append(user_data)
+                all_users_summary.append(user_summary)
+                total_users += 1
+                total_usd += total_usd_user
+                total_bdt += total_bdt_user
                 
             except Exception as e:
                 users_failed += 1
@@ -1878,51 +1758,35 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
         
         # STEP 3: Send notifications to users
         notified_users = 0
-        for user_data in all_users_data:
+        for user_summary in all_users_summary:
             try:
-                # Prepare message for user
+                # Prepare message
                 message = "✨ **Settlement Rate Update** ✨\n\n"
                 message += "📢 **Notification for Your Account**\n\n"
                 
                 message += "📋 **Details:**\n"
-                message += f"• 📅 **Date:** {user_data['settlement_date']}\n"
+                message += f"• 📅 **Date:** {user_summary['settlement_date']}\n"
                 
-                if len(user_data['countries']) == 1:
-                    message += f"• 🌍 **Country:** {user_data['countries'][0]}\n"
+                if len(user_summary['countries']) == 1:
+                    message += f"• 🌍 **Country:** {user_summary['countries'][0]}\n"
                 else:
-                    message += f"• 🌍 **Countries:** {', '.join(user_data['countries'])}\n"
+                    message += f"• 🌍 **Countries:** {', '.join(user_summary['countries'])}\n"
                 
-                message += f"• 🔢 **Your Personal Count:** {user_data['personal_counts']}\n"
-                message += f"• 💰 **Your Base Earnings:** ${user_data['personal_usd']:.2f} ({user_data['personal_counts']} × ${new_rate:.3f})\n\n"
+                # Show country-wise breakdown if multiple countries
+                if len(user_summary['country_totals']) > 1:
+                    message += "\n📊 **Country Breakdown:**\n"
+                    for country, count in user_summary['country_totals'].items():
+                        country_usd = count * new_rate
+                        message += f"• {country}: {count} counts = ${country_usd:.2f}\n"
                 
-                # Friends section
-                if user_data['friends']:
-                    message += "👥 **Your Friends Performance (min 10 counts required):**\n"
-                    
-                    for i, friend in enumerate(user_data['friends'], 1):
-                        message += f"\n{i}. **{friend['name']}**\n"
-                        message += f"   • Accounts: {friend['accounts']}\n"
-                        message += f"   • Counts: {friend['counts']}\n"
-                        message += f"   • **Commission:** ${friend['commission']:.2f} ({friend['counts']} × ${COMMISSION_RATE:.3f})\n"
-                    
-                    message += f"\n💸 **Total Commission from Friends:** ${user_data['total_commission']:.2f}\n\n"
-                else:
-                    message += "👥 **Your Network:**\n"
-                    message += "• Friends: 0 users\n"
-                    message += "• Commission: $0.00\n\n"
-                    message += "💡 **Tip:** Add friends to earn extra ${COMMISSION_RATE:.3f} commission per count from their work!\n\n"
+                message += f"• 🔢 **Total Count:** {user_summary['total_count']}\n\n"
                 
-                message += "💰 **Total Earnings:**\n"
-                if user_data['friends']:
-                    message += f"• Your Personal: ${user_data['personal_usd']:.2f}\n"
-                    message += f"• Commission from Friends: ${user_data['total_commission']:.2f}\n"
-                    message += f"• **Total USD:** ${user_data['total_usd']:.2f}\n"
-                else:
-                    message += f"• **Total USD:** ${user_data['total_usd']:.2f}\n"
+                message += "💰 **Payment Calculation:**\n"
+                message += f"• 📈 **New Rate:** ${new_rate:.2f}\n"
+                message += f"• 💵 **Total USD:** ${user_summary['total_usd']:.2f}\n"
+                message += f"• 🇧🇩 **Total BDT:** {user_summary['total_bdt']:.2f} BDT\n\n"
                 
-                message += f"• **Total BDT:** {user_data['total_bdt']:.2f} BDT\n\n"
-                
-                if user_data['token_refreshed']:
+                if user_summary['token_refreshed']:
                     message += "🔄 **Note:** Your account was auto-refreshed\n\n"
                 
                 message += "💳 **Payment Information:**\n"
@@ -1930,25 +1794,24 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 message += "📞 **Contact Admin for Payment Collection**"
                 
                 await context.bot.send_message(
-                    int(user_data['telegram_id']),
+                    int(user_summary['user_id']),
                     message,
                     parse_mode='Markdown'
                 )
                 notified_users += 1
                 await asyncio.sleep(1)
             except Exception as e:
-                print(f"❌ Notification failed for user {user_data['telegram_id']}: {e}")
+                print(f"❌ Notification failed: {e}")
         
-        # STEP 4: Send admin summary
-        if all_users_data:
-            # Main summary
+        # STEP 4: Send admin summary in multiple messages
+        if all_users_summary:
+            # First, send the main summary
             summary_message = "🎯 **Settlement Rate Update Complete** 🎯\n\n"
             
             summary_message += "📊 **Operation Summary:**\n"
             summary_message += f"• 📅 **Target Date:** {target_date_display}\n"
             summary_message += f"• 🔄 **Previous Rate:** ${old_rate:.2f}\n"
             summary_message += f"• ✅ **New Rate:** ${new_rate:.2f}\n"
-            summary_message += f"• 🤝 **Commission Rate:** ${COMMISSION_RATE:.3f} per count\n"
             summary_message += f"• 💱 **Exchange Rate:** 1 USD = {USD_TO_BDT} BDT\n"
             summary_message += f"• {filter_message}\n\n"
             
@@ -1959,21 +1822,11 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             summary_message += f"• ❌ **Failed:** {users_failed}\n"
             summary_message += f"• 📨 **Notifications Sent:** {notified_users}\n\n"
             
-            # Calculate totals
-            total_personal_counts = sum(u['personal_counts'] for u in all_users_data)
-            total_personal_usd = sum(u['personal_usd'] for u in all_users_data)
-            total_commission_usd = sum(u['total_commission'] for u in all_users_data)
-            total_usd = sum(u['total_usd'] for u in all_users_data)
-            total_bdt = sum(u['total_bdt'] for u in all_users_data)
-            
             summary_message += "💰 **Financial Summary:**\n"
-            summary_message += f"• 👥 **Total Users:** {len(all_users_data)}\n"
-            summary_message += f"• 🔢 **Total Personal Counts:** {total_personal_counts}\n"
-            summary_message += f"• 💵 **Total Personal USD:** ${total_personal_usd:.2f}\n"
-            summary_message += f"• 🤝 **Total Commission USD:** ${total_commission_usd:.2f}\n"
-            summary_message += f"• ✅ **Total USD:** ${total_usd:.2f}\n"
+            summary_message += f"• 👥 **Total Users:** {total_users}\n"
+            summary_message += f"• 💵 **Total USD:** ${total_usd:.2f}\n"
             summary_message += f"• 🇧🇩 **Total BDT:** {total_bdt:.2f} BDT\n"
-            summary_message += f"• 📊 **Total Records:** {sum(u['num_records'] for u in all_users_data)}\n\n"
+            summary_message += f"• 📊 **Total Records:** {sum(u['num_records'] for u in all_users_summary)}\n\n"
             
             summary_message += "✅ **Operation Successful!**\n"
             summary_message += f"All notifications have been sent to {notified_users} users."
@@ -1981,62 +1834,45 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             
             await processing_msg.edit_text(summary_message, parse_mode='Markdown')
             
-            # Now send user details in chunks
+            # Now send user details in chunks of 10 users per message
             users_per_message = 10
-            total_chunks = (len(all_users_data) + users_per_message - 1) // users_per_message
+            total_chunks = (len(all_users_summary) + users_per_message - 1) // users_per_message
             
             for chunk_index in range(total_chunks):
                 start_idx = chunk_index * users_per_message
-                end_idx = min(start_idx + users_per_message, len(all_users_data))
-                chunk = all_users_data[start_idx:end_idx]
+                end_idx = min(start_idx + users_per_message, len(all_users_summary))
+                chunk = all_users_summary[start_idx:end_idx]
                 
-                details_message = f"📋 **USER DETAILS - PART {chunk_index + 1}/{total_chunks}** 📋\n\n"
+                details_message = f"📋 **User Details - Part {chunk_index + 1}/{total_chunks}** 📋\n\n"
+                details_message += f"📅 **Date:** {target_date_display}\n"
+                details_message += f"💰 **Rate:** ${new_rate:.2f}\n\n"
                 
-                for i, user_data in enumerate(chunk, start=start_idx + 1):
-                    refresh_icon = " 🔄" if user_data['token_refreshed'] else ""
-                    display_name = user_data['full_name'] if user_data['full_name'] else user_data['username']
+                for i, user_summary in enumerate(chunk, start=start_idx + 1):
+                    refresh_icon = " 🔄" if user_summary['token_refreshed'] else ""
+                    details_message += f"**{i}. {user_summary['username']}**{refresh_icon}\n"
+                    details_message += f"   ├─ 👤 **ID:** {user_summary['api_user_id']}\n"
                     
-                    details_message += f"{i}. **{display_name}** (ID: {user_data['telegram_id']}){refresh_icon}\n"
-                    details_message += f"   ├─ 👤 **API ID:** {user_data['api_id']}\n"
-                    details_message += f"   ├─ 👥 **Accounts:** {user_data['accounts']}\n"
-                    
-                    if len(user_data['countries']) == 1:
-                        details_message += f"   ├─ 🌍 **Country:** {user_data['countries'][0]}\n"
+                    if len(user_summary['countries']) == 1:
+                        details_message += f"   ├─ 🌍 **Country:** {user_summary['countries'][0]}\n"
                     else:
-                        details_message += f"   ├─ 🌍 **Countries:** {', '.join(user_data['countries'])}\n"
+                        details_message += f"   ├─ 🌍 **Countries:** {', '.join(user_summary['countries'])}\n"
                     
-                    details_message += f"   ├─ 🔢 **Personal Count:** {user_data['personal_counts']}\n"
-                    details_message += f"   ├─ 💰 **Base Earnings:** ${user_data['personal_usd']:.2f}\n"
+                    # Show country breakdown for multiple countries
+                    if len(user_summary['country_totals']) > 1:
+                        for country, count in user_summary['country_totals'].items():
+                            details_message += f"   ├─ • {country}: {count}\n"
                     
-                    # Friends details
-                    if user_data['friends']:
-                        details_message += f"   ├─ 🤝 **Total Friends:** {len(user_data['friends'])} ({len(user_data['friends'])} eligible)\n"
-                        
-                        for j, friend in enumerate(user_data['friends'], 1):
-                            details_message += f"   ├─ 👤 **Friend {j}:** {friend['name']}\n"
-                            details_message += f"   ├─   ├─ 📱 **Accounts:** {friend['accounts']}\n"
-                            details_message += f"   ├─   ├─ 🔢 **Counts:** {friend['counts']} ✅\n"
-                            details_message += f"   ├─   └─ 💸 **Commission:** ${friend['commission']:.2f}\n"
-                        
-                        details_message += f"   ├─ 💸 **Total Commission:** ${user_data['total_commission']:.2f}\n"
-                    else:
-                        details_message += f"   ├─ 🤝 **Total Friends:** 0 users\n"
-                    
-                    details_message += f"   ├─ ✅ **Total USD:** ${user_data['total_usd']:.2f}\n"
-                    details_message += f"   └─ 🇧🇩 **Total BDT:** {user_data['total_bdt']:.2f}\n\n"
+                    details_message += f"   ├─ 🔢 **Count:** {user_summary['total_count']}\n"
+                    details_message += f"   ├─ 💵 **USD:** ${user_summary['total_usd']:.2f}\n"
+                    details_message += f"   └─ 🇧🇩 **BDT:** {user_summary['total_bdt']:.2f}\n\n"
                 
                 # Add chunk summary
-                chunk_personal_usd = sum(u['personal_usd'] for u in chunk)
-                chunk_commission_usd = sum(u['total_commission'] for u in chunk)
-                chunk_total_usd = sum(u['total_usd'] for u in chunk)
-                chunk_total_bdt = sum(u['total_bdt'] for u in chunk)
-                
+                chunk_usd = sum(u['total_usd'] for u in chunk)
+                chunk_bdt = sum(u['total_bdt'] for u in chunk)
                 details_message += f"📊 **Chunk {chunk_index + 1} Total:**\n"
                 details_message += f"• 👥 Users: {len(chunk)}\n"
-                details_message += f"• 💵 Personal USD: ${chunk_personal_usd:.2f}\n"
-                details_message += f"• 🤝 Commission USD: ${chunk_commission_usd:.2f}\n"
-                details_message += f"• ✅ Total USD: ${chunk_total_usd:.2f}\n"
-                details_message += f"• 🇧🇩 Total BDT: {chunk_total_bdt:.2f}\n\n"
+                details_message += f"• 💵 USD: ${chunk_usd:.2f}\n"
+                details_message += f"• 🇧🇩 BDT: {chunk_bdt:.2f}\n\n"
                 
                 if chunk_index < total_chunks - 1:
                     details_message += "⬇️ **More details in next message...**"
@@ -2051,12 +1887,12 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 except Exception as e:
                     print(f"❌ Error sending chunk {chunk_index + 1}: {e}")
             
-            # Send country-wise summary
+            # Send final detailed payment summary
             if countries and len(countries) > 0:
                 # Calculate total by country
                 country_summary = {}
-                for user_data in all_users_data:
-                    for country, count in user_data['country_totals'].items():
+                for user_summary in all_users_summary:
+                    for country, count in user_summary['country_totals'].items():
                         if country not in country_summary:
                             country_summary[country] = 0
                         country_summary[country] += count
@@ -2064,18 +1900,15 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 if country_summary:
                     country_message = "🌍 **Country-Wise Summary** 🌍\n\n"
                     country_message += f"📅 **Date:** {target_date_display}\n"
-                    country_message += f"💰 **Rate:** ${new_rate:.2f}\n"
-                    country_message += f"🤝 **Commission Rate:** ${COMMISSION_RATE:.3f} per count\n\n"
+                    country_message += f"💰 **Rate:** ${new_rate:.2f}\n\n"
                     
                     for country, count in country_summary.items():
-                        country_personal_usd = count * new_rate
-                        country_commission_usd = 0  # You can calculate this if needed
-                        country_total_usd = country_personal_usd + country_commission_usd
-                        country_total_bdt = country_total_usd * USD_TO_BDT
+                        country_usd = count * new_rate
+                        country_bdt = country_usd * USD_TO_BDT
                         country_message += f"**{country}:**\n"
                         country_message += f"• 🔢 **Count:** {count}\n"
-                        country_message += f"• 💵 **USD:** ${country_personal_usd:.2f}\n"
-                        country_message += f"• 🇧🇩 **BDT:** {country_total_bdt:.2f}\n\n"
+                        country_message += f"• 💵 **USD:** ${country_usd:.2f}\n"
+                        country_message += f"• 🇧🇩 **BDT:** {country_bdt:.2f}\n\n"
                     
                     try:
                         await context.bot.send_message(
@@ -2090,7 +1923,6 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             payment_message = "💰 **Final Payment Summary** 💰\n\n"
             payment_message += f"📅 **Date:** {target_date_display}\n"
             payment_message += f"💰 **Rate:** ${new_rate:.2f}\n"
-            payment_message += f"🤝 **Commission Rate:** ${COMMISSION_RATE:.3f} per count\n"
             
             if countries:
                 payment_message += f"🌍 **Countries:** {', '.join(countries)}\n"
@@ -2098,15 +1930,12 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             payment_message += f"💱 **1 USD =** {USD_TO_BDT} BDT\n\n"
             
             payment_message += "📊 **Final Totals:**\n"
-            payment_message += f"• 👥 **Total Users:** {len(all_users_data)}\n"
-            payment_message += f"• 🔢 **Total Personal Counts:** {total_personal_counts}\n"
-            payment_message += f"• 💵 **Total Personal USD:** ${total_personal_usd:.2f}\n"
-            payment_message += f"• 🤝 **Total Commission USD:** ${total_commission_usd:.2f}\n"
-            payment_message += f"• ✅ **Total USD:** ${total_usd:.2f}\n"
+            payment_message += f"• 👥 **Total Users:** {total_users}\n"
+            payment_message += f"• 💵 **Total USD:** ${total_usd:.2f}\n"
             payment_message += f"• 🇧🇩 **Total BDT:** {total_bdt:.2f}\n\n"
             
             payment_message += "💳 **Payment Distribution Complete**\n"
-            payment_message += "✅ All users have been notified with commission details."
+            payment_message += "✅ All users have been notified."
             
             try:
                 await context.bot.send_message(
@@ -2125,7 +1954,6 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             summary_message += f"• 📅 **Target Date:** {target_date_display}\n"
             summary_message += f"• 🔄 **Previous Rate:** ${old_rate:.2f}\n"
             summary_message += f"• ✅ **New Rate:** ${new_rate:.2f}\n"
-            summary_message += f"• 🤝 **Commission Rate:** ${COMMISSION_RATE:.3f} per count\n"
             summary_message += f"• {filter_message}\n\n"
             
             summary_message += "📈 **Processing Statistics:**\n"
@@ -2138,8 +1966,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             else:
                 summary_message += f"📭 **No settlements found for {target_date_display}**\n"
             
-            summary_message += f"ℹ️ **Rate Updated:** ${new_rate:.2f} (for future settlements)\n"
-            summary_message += f"ℹ️ **Commission Rate:** ${COMMISSION_RATE:.3f} per count\n\n"
+            summary_message += f"ℹ️ **Rate Updated:** ${new_rate:.2f} (for future settlements)\n\n"
             summary_message += f"⏰ **Completed at:** {datetime.now().strftime('%H:%M:%S')}"
             
             await processing_msg.edit_text(summary_message, parse_mode='Markdown')
