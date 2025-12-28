@@ -54,7 +54,7 @@ else:
     OTP_STATS_FILE = "otp_stats.json"
     SETTINGS_FILE = "settings.json"
 
-USD_TO_BDT = 125  # Exchange rate
+USD_TO_BDT = 124  # Exchange rate
 MAX_PER_ACCOUNT = 5
 
 
