@@ -1585,7 +1585,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
         total_users = 0
         total_usd = 0
         total_bdt = 0
-        USD_TO_BDT = 125
+        USD_TO_BDT = 124
         
         # Counters
         users_processed = 0
@@ -1836,7 +1836,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             await processing_msg.edit_text(summary_message, parse_mode='Markdown')
             
             # Now send user details in chunks of 10 users per message
-            users_per_message = 10
+            users_per_message = 7
             total_chunks = (len(all_users_summary) + users_per_message - 1) // users_per_message
             
             for chunk_index in range(total_chunks):
