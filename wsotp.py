@@ -102,7 +102,7 @@ async def keep_alive_enhanced():
     """Enhanced keep-alive with multiple strategies for Render"""
     keep_alive_urls = [
         "https://waotp-dpqw.onrender.com",
-        "https://autoping-6hvq.onrender.com"
+        "https://autoping-1-ymen.onrender.com"
     ]
     
     while True:
