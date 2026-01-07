@@ -3705,7 +3705,7 @@ async def start(update: Update, context: CallbackContext) -> None:
         f"🔥 WA OTP\n\n"
         f"📱 Active Account: {selected_account}\n"
         f"✅ Active Login: {active_accounts_count}\n"
-        f"🎯 Remaining Checks: {remaining}\n\n"
+        f"🎯 Remaining Add: {remaining}\n\n"
         f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code",
         reply_markup=reply_markup
     )
@@ -4380,7 +4380,7 @@ async def track_status_optimized(context: CallbackContext):
                     print(f"❌ Final message update failed for {phone}: {e}")
             return
         
-        if checks >= 60:  # Reduced from 150 to 100
+        if checks >= 120:  # Reduced from 150 to 100
             account_manager.release_token(token)
             if phone in active_numbers:
                 del active_numbers[phone]
