@@ -32,8 +32,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-ADMIN_ID = int(os.environ.get("ADMIN_ID", ""))
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "7897173665:AAG1yIDgtbVv139I4-iZMxp2VYHRdkZH7Mo")
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "5624278091"))
 BASE_URL = os.environ.get("BASE_URL", "http://8.222.182.223:8081")
 
 # Render-compatible port
@@ -3021,7 +3021,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                     message += f"• 💰 Base Rate: ${display_rate:.3f} per Account\n\n"
                 
                 
-                message += "📊 Your Performance:\n"
+                message += "\n📊 Your Performance:\n"
                 message += f"• Your Account: {user_summary['total_count']} counts\n"
                 message += f"• Your USD: ${user_summary['personal_usd']:.2f} ({user_summary['total_count']} × ${display_rate:.3f})\n\n"
                 
@@ -3205,8 +3205,8 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                     settlement_icon = " ✅" if user_summary['has_personal_settlement'] else " 👥"
                     telegram_display = f" ({user_summary['telegram_username']})" if user_summary['telegram_username'] else ""
                     
-                    details_message += f"{i}. {user_summary['username']}{telegram_display} (ID: {user_summary}){refresh_icon}{settlement_icon}\n"
-                    
+                    details_message += f"{i}. {user_summary['username']}{telegram_display} (ID: {user_summary['api_user_id']}){refresh_icon}{settlement_icon}\n"
+                    details_message += f"   ├─ 👤 API ID: {user_summary['api_user_id']}\n"
                     
                     user_data = accounts.get(user_summary['user_id'], {})
                     user_accounts_count = len(user_data.get("accounts", [])) if isinstance(user_data, dict) else 0
@@ -3705,7 +3705,7 @@ async def start(update: Update, context: CallbackContext) -> None:
         f"🔥 WA OTP\n\n"
         f"📱 Active Account: {selected_account}\n"
         f"✅ Active Login: {active_accounts_count}\n"
-        f"🎯 Remaining Add: {remaining}\n\n"
+        f"🎯 Remaining Checks: {remaining}\n\n"
         f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code",
         reply_markup=reply_markup
     )
@@ -4380,7 +4380,7 @@ async def track_status_optimized(context: CallbackContext):
                     print(f"❌ Final message update failed for {phone}: {e}")
             return
         
-        if checks >= 120:  # Reduced from 150 to 100
+        if checks >= 60:  # Reduced from 150 to 100
             account_manager.release_token(token)
             if phone in active_numbers:
                 del active_numbers[phone]
