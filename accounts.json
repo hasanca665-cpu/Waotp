@@ -1,19 +1,32 @@
 {
-    "7319925086": [
-        {
-            "username": "HasanCAA",
-            "password": "HasanCAA",
-            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJndWxpLXVzZXIiLCJpYXQiOjE3NjQ1NzA4NTEsImV4cCI6MTc2NDU5NTg4NCwiaWQiOiIxOTE4OTE4ODE3MDQ5NzI2OTc3Iiwibmlja25hbWUiOiJIYXNhbkNBQSJ9.poiLlySgNWTRHguq_NXl1vtU0t_mlQznM2EA_fQika8",
-            "api_user_id": "1918918817049726977",
-            "nickname": "HasanCAA",
-            "last_login": "2025-01-27T15:30:00.000000",
-            "active": true,
-            "added_by": 5624278091,
-            "added_at": "2025-01-27T15:30:00.000000"
-        }
+  "7319925086": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
+        "username": "HasanCAA",
+        "password": "HasanCAA",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJndWxpLXVzZXIiLCJpYXQiOjE3NjQ1NzA4NTEsImV4cCI6MTc2NDU5NTg4NCwiaWQiOiIxOTE4OTE4ODE3MDQ5NzI2OTc3Iiwibmlja25hbWUiOiJIYXNhbkNBQSJ9.poiLlySgNWTRHguq_NXl1vtU0t_mlQznM2EA_fQika8",
+        "api_user_id": "1918918817049726977",
+        "nickname": "HasanCAA",
+        "last_login": "2025-01-27T15:30:00.000000",
+        "active": true,
+        "default": true,
+        "added_by": 5624278091,
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7046569449": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7046569449": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "NahidmCA",
         "password": "NahidmCA",
         "token": "",
@@ -21,51 +34,142 @@
         "nickname": "NahidmCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "2062865478": [
-        {
-            "username": "MahadiCAA",
-            "password": "MahadiCAA",
-            "token": "",
-            "api_user_id": "",
-            "nickname": "MahadiCAA",
-            "last_login": "2025-01-27T15:30:00.000000",
-            "active": true,
-            "added_by": 5624278091,
-            "added_at": "2025-01-27T15:30:00.000000"
-        }
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "2062865478": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
+        "username": "MahadiCAA",
+        "password": "MahadiCAA",
+        "token": "",
+        "api_user_id": "",
+        "nickname": "MahadiCAA",
+        "last_login": "2025-01-27T15:30:00.000000",
+        "active": true,
+        "default": true,
+        "added_by": 5624278091,
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "6580292440": [
-        {
-            "username": "ArifCA",
-            "password": "ArifCA",
-            "token": "",
-            "api_user_id": "",
-            "nickname": "ArifCA",
-            "last_login": "2025-01-27T15:30:00.000000",
-            "active": true,
-            "added_by": 5624278091,
-            "added_at": "2025-01-27T15:30:00.000000"
-        }
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "6580292440": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
+        "username": "ArifCA",
+        "password": "ArifCA",
+        "token": "",
+        "api_user_id": "",
+        "nickname": "ArifCA",
+        "last_login": "2025-01-27T15:30:00.000000",
+        "active": true,
+        "default": true,
+        "added_by": 5624278091,
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": [
+          {
+            "user_id": "7046569449",
+            "name": "NahidmCA",
+            "telegram_username": ""
+          },
+          {
+            "user_id": "2062865478",
+            "name": "MahadiCAA",
+            "telegram_username": ""
+          },
+          {
+            "user_id": "6475107672",
+            "name": "RiazCA",
+            "telegram_username": ""
+          },
+          {
+            "user_id": "7247951093",
+            "name": "RafiqCA",
+            "telegram_username": ""
+          },
+          {
+            "user_id": "7535165906",
+            "name": "MahmudCA",
+            "telegram_username": ""
+          },
+          {
+            "user_id": "6053503279",
+            "name": "OwasyeCA",
+            "telegram_username": ""
+          },
+          {
+            "user_id": "7877267765",
+            "name": "AlifCA",
+            "telegram_username": ""
+          },
+          {
+            "user_id": "7945687680",
+            "name": "Foysal1CA",
+            "telegram_username": ""
+          },
+          {
+            "user_id": "7553195848",
+            "name": "Rafiq2CA",
+            "telegram_username": ""
+          },
+          {
+            "user_id": "5988324432",
+            "name": "Rafiq3CA",
+            "telegram_username": ""
+          }
+        ]
+      }
     ],
-    "6475107672": [
-        {
-            "username": "RiazCA",
-            "password": "RiazCA",
-            "token": "",
-            "api_user_id": "",
-            "nickname": "RiazCA",
-            "last_login": "2025-01-27T15:30:00.000000",
-            "active": true,
-            "added_by": 5624278091,
-            "added_at": "2025-01-27T15:30:00.000000"
-        }
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "6475107672": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
+        "username": "RiazCA",
+        "password": "RiazCA",
+        "token": "",
+        "api_user_id": "",
+        "nickname": "RiazCA",
+        "last_login": "2025-01-27T15:30:00.000000",
+        "active": true,
+        "default": true,
+        "added_by": 5624278091,
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7247951093": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7247951093": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "RafiqCA",
         "password": "RafiqCA",
         "token": "",
@@ -73,12 +177,22 @@
         "nickname": "RafiqCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7535165906": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7535165906": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "MahmudCA",
         "password": "MahmudCA",
         "token": "",
@@ -86,12 +200,22 @@
         "nickname": "MahmudCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
-],
-"6053503279": [
-    {
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
+    ],
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "6053503279": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "OwasyeCA",
         "password": "OwasyeCA",
         "token": "",
@@ -99,12 +223,22 @@
         "nickname": "OwasyeCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
-],
-"8388774130": [
-    {
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
+    ],
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "8388774130": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "Emon2CA",
         "password": "Emon2CA",
         "token": "",
@@ -112,12 +246,22 @@
         "nickname": "Emon2CA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
-],
-"7663387076": [
-    {
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
+    ],
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7663387076": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "GolamrobbaniCA",
         "password": "GolamrobbaniCA",
         "token": "",
@@ -125,12 +269,22 @@
         "nickname": "GolamrobbaniCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7553195848": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7553195848": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "Rafiq2CA",
         "password": "Rafiq2CA",
         "token": "",
@@ -138,12 +292,22 @@
         "nickname": "RafiqCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "5988324432": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "5988324432": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "Rafiq3CA",
         "password": "Rafiq3CA",
         "token": "",
@@ -151,12 +315,22 @@
         "nickname": "Rafiq3CA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7270553502": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7270553502": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "Sumon1CA",
         "password": "Sumon1CA",
         "token": "",
@@ -164,12 +338,22 @@
         "nickname": "Sumon1CA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7491897285": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7491897285": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "NiloyCA",
         "password": "NiloyCA",
         "token": "",
@@ -177,12 +361,22 @@
         "nickname": "NiloyCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7063697178": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7063697178": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "Rasel1CA",
         "password": "Rasel1CA",
         "token": "",
@@ -190,12 +384,22 @@
         "nickname": "Rasel1CA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7038451580": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7038451580": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "HelallCA",
         "password": "HelallCA",
         "token": "",
@@ -203,12 +407,22 @@
         "nickname": "HelallCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "8422102264": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "8422102264": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "RahimCA",
         "password": "RahimCA",
         "token": "",
@@ -216,12 +430,22 @@
         "nickname": "RahimCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "8391590296": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "8391590296": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "SagirCA",
         "password": "SagirCA",
         "token": "",
@@ -229,12 +453,22 @@
         "nickname": "SagirCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "5988708123": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "5988708123": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "AfridiCA",
         "password": "AfridiCA",
         "token": "",
@@ -242,12 +476,22 @@
         "nickname": "AfridiCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7451596833": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7451596833": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "SabbirhosenCA",
         "password": "SabbirhosenCA",
         "token": "",
@@ -255,12 +499,28 @@
         "nickname": "SabbirhosenCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": [
+          {
+            "user_id": "8558217920",
+            "name": "SBJihadCA",
+            "telegram_username": ""
+          }
+        ]
+      }
     ],
-    "8558217920": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "8558217920": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "SBJihadCA",
         "password": "SBJihadCA",
         "token": "",
@@ -268,25 +528,22 @@
         "nickname": "SBJihadCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "8558214920": [
-    {
-        "username": "TeamSabbirCA",
-        "password": "TeamSabbirCA",
-        "token": "",
-        "api_user_id": "",
-        "nickname": "TeamSabbirCA",
-        "last_login": "2025-01-27T15:30:00.000000",
-        "active": true,
-        "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
-    ],
-    "5279933937": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "5279933937": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "ImamCA",
         "password": "ImamCA",
         "token": "",
@@ -294,12 +551,22 @@
         "nickname": "ImamCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "674331386": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "674331386": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "RakibulIslamCA",
         "password": "RakibulIslamCA",
         "token": "",
@@ -307,12 +574,22 @@
         "nickname": "RakibulIslamCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7328931451": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7328931451": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "MehidiCA",
         "password": "MehidiCA",
         "token": "",
@@ -320,12 +597,22 @@
         "nickname": "MehidiCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "1439851641": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "1439851641": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "MeheihasanCA",
         "password": "MeheihasanCA",
         "token": "",
@@ -333,12 +620,22 @@
         "nickname": "MeheihasanCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "5273069367": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "5273069367": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "NahidhasanCA",
         "password": "NahidhasanCA",
         "token": "",
@@ -346,12 +643,22 @@
         "nickname": "NahidhasanCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "6383091401": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "6383091401": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "SajeedCA",
         "password": "SajeedCA",
         "token": "",
@@ -359,12 +666,22 @@
         "nickname": "SajeedCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7434134654": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7434134654": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "MahfuzCA",
         "password": "MahfuzCA",
         "token": "",
@@ -372,12 +689,22 @@
         "nickname": "MahfuzCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "1557850938": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "1557850938": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "AnupCA",
         "password": "AnupCA",
         "token": "",
@@ -385,12 +712,22 @@
         "nickname": "AnupCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "6183428434": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "6183428434": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "RobiulCA",
         "password": "RobiulCA",
         "token": "",
@@ -398,12 +735,22 @@
         "nickname": "RobiulCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "6020222647": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "6020222647": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "BachuCA",
         "password": "BachuCA",
         "token": "",
@@ -411,12 +758,22 @@
         "nickname": "BachuCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7542521426": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7542521426": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "BidhanCA",
         "password": "BidhanCA",
         "token": "",
@@ -424,12 +781,22 @@
         "nickname": "BidhanCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "8066146371": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "8066146371": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "BiplobCA",
         "password": "BiplobCA",
         "token": "",
@@ -437,12 +804,22 @@
         "nickname": "BiplobCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "5425803444": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "5425803444": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "ParvezCA",
         "password": "ParvezCA",
         "token": "",
@@ -450,12 +827,22 @@
         "nickname": "ParvezCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "8237780101": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "8237780101": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "Rakib2CA",
         "password": "Rakib2CA",
         "token": "",
@@ -463,12 +850,22 @@
         "nickname": "Rakib2CA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7309135417": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7309135417": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "ShantoCA",
         "password": "ShantoCA",
         "token": "",
@@ -476,12 +873,22 @@
         "nickname": "ShantoCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "6612851770": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "6612851770": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "EsrafilCA",
         "password": "EsrafilCA",
         "token": "",
@@ -489,12 +896,22 @@
         "nickname": "EsrafilCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7503511080": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7503511080": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "Sabbir1CA",
         "password": "Sabbir1CA",
         "token": "",
@@ -502,12 +919,22 @@
         "nickname": "Sabbir1CA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7550593085": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7550593085": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "ArafatCA",
         "password": "ArafatCA",
         "token": "",
@@ -515,12 +942,22 @@
         "nickname": "ArafatCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "5269965859": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "5269965859": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "MehrabCA",
         "password": "MehrabCA",
         "token": "",
@@ -528,12 +965,28 @@
         "nickname": "MehrabCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": [
+          {
+            "user_id": "1234567890",
+            "name": "AponCA",
+            "telegram_username": ""
+          }
+        ]
+      }
     ],
-    "1234567890": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "1234567890": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "AponCA",
         "password": "AponCA",
         "token": "",
@@ -541,51 +994,114 @@
         "nickname": "AponCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "6181088245": [
-        {
-            "username": "BadhonCA",
-            "password": "BadhonCA",
-            "token": "",
-            "api_user_id": "",
-            "nickname": "BadhonCA",
-            "last_login": "2025-01-27T15:30:00.000000",
-            "active": true,
-            "added_by": 5624278091,
-            "added_at": "2025-01-27T15:30:00.000000"
-        }
-    ],
-    "6689570323": [
-        {
-            "username": "SanjuCAA",
-            "password": "SanjuCAA",
-            "token": "",
-            "api_user_id": "",
-            "nickname": "SanjuCAA",
-            "last_login": "2025-01-27T15:30:00.000000",
-            "active": true,
-            "added_by": 5624278091,
-            "added_at": "2025-01-27T15:30:00.000000"
-        }
-    ],
-    "7187720402": [
-    {
-        "username": "HimelBN",
-        "password": "HimelBN",
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "6181088245": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
+        "username": "BadhonCA",
+        "password": "BadhonCA",
         "token": "",
         "api_user_id": "",
-        "nickname": "HimelBN",
+        "nickname": "BadhonCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "7176122292": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "6689570323": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
+        "username": "SanjuCAA",
+        "password": "SanjuCAA",
+        "token": "",
+        "api_user_id": "",
+        "nickname": "SanjuCAA",
+        "last_login": "2025-01-27T15:30:00.000000",
+        "active": true,
+        "default": true,
+        "added_by": 5624278091,
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
+    ],
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+    "8209335329": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Cameroon 🇨🇲",
+        "username": "YamimCM",
+        "password": "YamimCM",
+        "token": "",
+        "api_user_id": "",
+        "nickname": "YamimCM",
+        "last_login": "2025-01-27T15:30:00.000000",
+        "active": true,
+        "default": true,
+        "added_by": 5624278091,
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
+    ],
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7984603133": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Egypt 🇪🇬",
+        "username": "KobirEG",
+        "password": "KobirEG",
+        "token": "",
+        "api_user_id": "",
+        "nickname": "KobirEG",
+        "last_login": "2025-01-27T15:30:00.000000",
+        "active": true,
+        "default": true,
+        "added_by": 5624278091,
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
+    ],
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "7176122292": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "shazid1BN",
         "password": "shazid1BN",
         "token": "",
@@ -593,12 +1109,22 @@
         "nickname": "shazid1BN",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "8294830954": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "8294830954": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Benin 🇧🇯",
         "username": "RakibulBN",
         "password": "RakibulBN",
         "token": "",
@@ -606,25 +1132,68 @@
         "nickname": "RakibulBN",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "5287458061": [
-    {
-        "username": "MuradCA",
-        "password": "MuradCA",
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+    "7945687680": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
+        "username": "Foysal1CA",
+        "password": "Foysal1CA",
         "token": "",
         "api_user_id": "",
-        "nickname": "MuradCA",
+        "nickname": "Foysal1CA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
     ],
-    "6452207081": [
-    {
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+    "7877267765": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
+        "username": "AlifCA",
+        "password": "AlifCA",
+        "token": "",
+        "api_user_id": "",
+        "nickname": "AlifCA",
+        "last_login": "2025-01-27T15:30:00.000000",
+        "active": true,
+        "default": true,
+        "added_by": 5624278091,
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
+    ],
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  },
+  "6452207081": {
+    "accounts": [
+      {
+        "id": 1,
+        "custom_name": "Canada 🇨🇦",
         "username": "NaimCA",
         "password": "NaimCA",
         "token": "",
@@ -632,8 +1201,15 @@
         "nickname": "NaimCA",
         "last_login": "2025-01-27T15:30:00.000000",
         "active": true,
+        "default": true,
         "added_by": 5624278091,
-        "added_at": "2025-01-27T15:30:00.000000"
-    }
-    ]
+        "added_at": "2025-01-27T15:30:00.000000",
+        "telegram_username": "",
+        "friends": []
+      }
+    ],
+    "selected_account_id": 1,
+    "telegram_username": "",
+    "last_active": "2025-01-27T15:30:00.000000"
+  }
 }
