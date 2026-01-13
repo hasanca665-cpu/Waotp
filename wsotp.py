@@ -123,7 +123,7 @@ async def random_ping():
             await asyncio.sleep(random_time)
             
             async with aiohttp.ClientSession() as session:
-                async with session.get("https://webck-9utn.onrender.com", timeout=10) as response:
+                async with session.get("https://waotp-ppq1.onrender.com", timeout=10) as response:
                     print(f"🎲 Random ping sent: Status {response.status}")
                     
         except Exception as e:
@@ -133,7 +133,7 @@ async def immediate_ping():
     await asyncio.sleep(30)
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get("https://webck-9utn.onrender.com", timeout=10) as response:
+            async with session.get("https://waotp-ppq1.onrender.com", timeout=10) as response:
                 print(f"🚀 Immediate startup ping: Status {response.status}")
     except Exception as e:
         print(f"⚠️ Immediate ping failed: {e}")
